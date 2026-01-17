@@ -17,11 +17,39 @@ namespace rest_cpp {
     RestClient::RestClient(RestClientConfiguration config)
         : m_config(std::move(config)),
           io_(1),
+          m_resolver(io_),
           ssl_ctx_(boost::asio::ssl::context::tls_client) {
         init_tls();
     }
 
-    RestClient::~RestClient() = default;
+    RestClient::~RestClient() noexcept {
+        // Destructor must never throw.
+        boost::system::error_code ec;
+
+        // Close HTTPS first
+        if (m_https_stream) {
+            m_https_stream->shutdown(ec);
+
+            // Close underlying TCP socket.
+            auto r =
+                beast::get_lowest_layer(*m_https_stream).socket().close(ec);
+
+            // Stop bitching
+            (void)r;
+
+            m_https_stream.reset();
+        }
+
+        // Close HTTP.
+        if (m_http_stream) {
+            m_http_stream->socket().close();
+            m_http_stream.reset();
+        }
+
+        m_active_https_connection = false;
+        m_host.clear();
+        m_port.clear();
+    }
 
     void RestClient::init_tls() {
         // Load system default CA certificates
@@ -78,6 +106,9 @@ namespace rest_cpp {
         req.set(http::field::host, u.host);
         req.set(http::field::user_agent, m_config.user_agent);
 
+        // Keep-alive by default
+        req.keep_alive(true);
+
         apply_request_headers(request.headers, req.base());
         // Optional body
         if (request.body.has_value()) {
@@ -86,50 +117,34 @@ namespace rest_cpp {
         }
         boost::system::error_code ec;
 
-        // Resolve
-        tcp::resolver resolver(io_);
-        auto results = resolver.resolve(u.host, u.port, ec);
-        if (ec) {
-            return Result<Response>::err(Error{
-                Error::Code::ConnectionFailed,
-                "Resolve failed: " + ec.message(),
-            });
-        }
         // Establish the connection and do work
         if (!u.https) {
-            // Plain HTTP
-            beast::tcp_stream stream(io_);
-
-            stream.connect(results, ec);
-            if (ec) {
+            if (!ensure_http_connected(u, ec)) {
                 return Result<Response>::err(Error{
                     Error::Code::ConnectionFailed,
                     "Connect failed: " + ec.message(),
                 });
             }
 
-            // Send the HTTP request to the remote host
-            http::write(stream, req, ec);
+            http::write(*m_http_stream, req, ec);
             if (ec) {
+                close_http();
                 return Result<Response>::err(Error{
                     Error::Code::SendFailed,
                     "Write failed: " + ec.message(),
                 });
             }
 
-            // Receive the HTTP response
             beast::flat_buffer buffer;
             http::response<http::string_body> res;
-            http::read(stream, buffer, res, ec);
+            http::read(*m_http_stream, buffer, res, ec);
             if (ec) {
+                close_http();
                 return Result<Response>::err(Error{
                     Error::Code::ReceiveFailed,
                     "Read failed: " + ec.message(),
                 });
             }
-
-            // Best-effort shutdown
-            stream.socket().shutdown(tcp::socket::shutdown_both);
 
             Response out;
             out.status_code = static_cast<int>(res.result_int());
@@ -139,34 +154,15 @@ namespace rest_cpp {
         }
 
         // HTTPS
-        beast::ssl_stream<beast::tcp_stream> stream(io_, ssl_ctx_);
-        // SNI - set the hostname for SSL handshake
-        if (!SSL_set_tlsext_host_name(stream.native_handle(), u.host.c_str())) {
-            boost::system::error_code sni_ec(
-                static_cast<int>(::ERR_get_error()),
-                net::error::get_ssl_category());
-
-            return Result<Response>::err(Error{
-                Error::Code::TlsHandshakeFailed,
-                "SNI set failed: " + sni_ec.message(),
-            });
-        }
-        beast::get_lowest_layer(stream).connect(results, ec);
-        if (ec) {
+        if (!ensure_https_connected(u, ec)) {
             return Result<Response>::err(Error{
                 Error::Code::ConnectionFailed,
                 "Connect failed: " + ec.message(),
             });
         }
-        stream.handshake(ssl::stream_base::client, ec);
+        http::write(*m_https_stream, req, ec);
         if (ec) {
-            return Result<Response>::err(Error{
-                Error::Code::TlsHandshakeFailed,
-                "TLS handshake failed: " + ec.message(),
-            });
-        }
-        http::write(stream, req, ec);
-        if (ec) {
+            close_https();
             return Result<Response>::err(Error{
                 Error::Code::SendFailed,
                 "Write failed: " + ec.message(),
@@ -174,18 +170,15 @@ namespace rest_cpp {
         }
         beast::flat_buffer buffer;
         http::response<http::string_body> res;
-        http::read(stream, buffer, res, ec);
+        http::read(*m_https_stream, buffer, res, ec);
         if (ec) {
+            close_https();
             return Result<Response>::err(Error{
                 Error::Code::ReceiveFailed,
                 "Read failed: " + ec.message(),
             });
         }
-        // TLS shutdown
-        stream.shutdown(ec);
-        if (ec == net::error::eof || ec == ssl::error::stream_truncated) {
-            ec = {};
-        }
+
         Response out;
         out.status_code = static_cast<int>(res.result_int());
         copy_response_headers(res.base(), out.headers);
@@ -229,6 +222,109 @@ namespace rest_cpp {
                                        std::string body) {
         Request r{HttpMethod::Patch, url, {}, std::move(body)};
         return send(r);
+    }
+
+    void RestClient::close_http() noexcept {
+        if (m_http_stream) {
+            m_http_stream->socket().close();
+            m_http_stream.reset();
+        }
+        m_host.clear();
+        m_port.clear();
+    }
+
+    bool RestClient::ensure_http_connected(const ParsedUrl& u,
+                                           boost::system::error_code& ec) {
+        ec = {};
+
+        // If same endpoint and socket open, reuse.
+        if (m_http_stream && m_http_stream->socket().is_open() &&
+            m_host == u.host && m_port == u.port) {
+            return true;
+        }
+
+        // Endpoint changed or dead socket: rebuild.
+        close_http();
+
+        auto results = m_resolver.resolve(u.host, u.port, ec);
+        if (ec) return false;
+
+        m_http_stream.emplace(io_);
+        m_http_stream->connect(results, ec);
+        if (ec) {
+            close_http();
+            return false;
+        }
+
+        m_host = u.host;
+        m_port = u.port;
+        return true;
+    }
+
+    void RestClient::close_https() noexcept {
+        if (m_https_stream) {
+            // Best effort TLS shutdown (ignore errors).
+            m_https_stream->shutdown();
+            beast::get_lowest_layer(*m_https_stream).socket().close();
+            m_https_stream.reset();
+        }
+
+        // If this connection was the active one, clear endpoint tracking too.
+        if (m_active_https_connection) {
+            m_active_https_connection = false;
+            m_host.clear();
+            m_port.clear();
+        }
+    }
+
+    bool RestClient::ensure_https_connected(const ParsedUrl& u,
+                                            boost::system::error_code& ec) {
+        ec = {};
+
+        // Reuse if same endpoint, scheme matches, and socket open.
+        if (m_https_stream && m_active_https_connection && m_host == u.host &&
+            m_port == u.port &&
+            beast::get_lowest_layer(*m_https_stream).socket().is_open()) {
+            return true;
+        }
+
+        // If we had an HTTP connection tracked as active, close it when
+        // switching schemes.
+        if (!m_host.empty() && !m_active_https_connection) {
+            close_http();
+        }
+        close_https();
+
+        auto results = m_resolver.resolve(u.host, u.port, ec);
+        if (ec) return false;
+
+        m_https_stream.emplace(io_, ssl_ctx_);
+
+        // SNI for TLS
+        if (!SSL_set_tlsext_host_name(m_https_stream->native_handle(),
+                                      u.host.c_str())) {
+            ec = boost::system::error_code(static_cast<int>(::ERR_get_error()),
+                                           net::error::get_ssl_category());
+            close_https();
+            return false;
+        }
+
+        beast::get_lowest_layer(*m_https_stream).connect(results, ec);
+        if (ec) {
+            close_https();
+            return false;
+        }
+
+        m_https_stream->handshake(ssl::stream_base::client, ec);
+        if (ec) {
+            close_https();
+            return false;
+        }
+
+        m_active_https_connection = true;
+        m_host = u.host;
+        m_port = u.port;
+        return true;
     }
 
 }  // namespace rest_cpp

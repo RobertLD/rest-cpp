@@ -14,6 +14,7 @@ else()
 endif()
 
 option(REST_CPP_BUILD_TESTS "Build tests" ${_rest_cpp_top_level})
+option(REST_CPP_BUILD_PERF "Build perf benchmarks" OFF)
 option(REST_CPP_INSTALL "Enable install/export packaging" ${_rest_cpp_top_level})
 option(REST_CPP_WARNINGS_AS_ERRORS "Treat warnings as errors" ${_rest_cpp_top_level})
 
@@ -139,6 +140,36 @@ if (REST_CPP_BUILD_TESTS)
   else()
     message(STATUS "REST_CPP_BUILD_TESTS=ON but no tests found; skipping rest_cpp_tests.")
   endif()
+
+   ### Perf
+   if (REST_CPP_BUILD_PERF)
+
+    # Find da files
+    file(GLOB_RECURSE REST_CPP_PERF_SOURCES
+      CONFIGURE_DEPENDS
+      "${CMAKE_CURRENT_SOURCE_DIR}/perf/*.cpp"
+      "${CMAKE_CURRENT_SOURCE_DIR}/perf/*.cc"
+      "${CMAKE_CURRENT_SOURCE_DIR}/perf/*.cxx"
+    )
+    if (REST_CPP_PERF_SOURCES)
+        add_executable(rest_cpp_perf_tests
+        ${REST_CPP_PERF_SOURCES}
+      )
+       target_link_libraries(rest_cpp_perf_tests
+        PRIVATE
+          GTest::gtest_main
+          rest_cpp
+      )
+            target_compile_features(rest_cpp_perf_tests PRIVATE cxx_std_20)
+   if (_rest_cpp_top_level)
+        rest_cpp_set_warnings(rest_cpp_perf_tests)
+      endif()
+
+
+    endif()
+   endif()
+
+
 endif()
 
 ### Install / Export (only when packaging)

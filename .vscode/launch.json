@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run rest_cpp_perf_tests",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/dev-perf/rest_cpp_perf_tests",
+            "args": [
+                "--gtest_filter=RestClientPerf.*"
+            ],
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "REST_CPP_PERF_URL",
+                    "value": "https://localhost:8443"
+                },
+                {
+                    "name": "REST_CPP_PERF_PATH",
+                    "value": "/health"
+                },
+                {
+                    "name": "REST_CPP_PERF_ITERS",
+                    "value": "100"
+                }
+            ],
+            "stopAtEntry": false
+        }
+    ]
+}
