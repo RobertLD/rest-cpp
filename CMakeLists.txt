@@ -66,10 +66,11 @@ endif()
 find_package(OpenSSL REQUIRED)
 
 # boost
-find_package(Boost CONFIG QUIET COMPONENTS system)
+find_package(Boost CONFIG QUIET COMPONENTS system )
 if (NOT Boost_FOUND)
-  find_package(Boost REQUIRED COMPONENTS system)
+  find_package(Boost REQUIRED COMPONENTS system )
 endif()
+
 
 # nlohmann/json
 option(REST_CPP_USE_SYSTEM_NLOHMANN "Use system nlohmann_json package" ${REST_CPP_INSTALL})

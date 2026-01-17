@@ -1,1 +1,12 @@
-{ BasedOnStyle: Google, IndentWidth: 4, BreakBeforeBraces: Attach }
+{
+    BasedOnStyle: Google,
+    IndentWidth: 4,
+    TabWidth: 4,
+    UseTab: Never,
+    BreakBeforeBraces: Attach,
+    NamespaceIndentation: All,
+    PointerAlignment: Left,
+    ReferenceAlignment: Left,
+    SeparateDefinitionBlocks: Always
+
+}
