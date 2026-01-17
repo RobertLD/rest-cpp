@@ -1,0 +1,5 @@
+{
+    "cmake.configureSettings": {
+        "REST_CPP_BUILD_TESTS": true
+    }
+}

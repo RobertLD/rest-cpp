@@ -1,2 +1,2 @@
-# rest-cpp
-C++ REST Wrapper
+# kalshi-cpp-sdk
+Unofficial C++ SDK for Kalshi API
