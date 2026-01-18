@@ -4,7 +4,7 @@
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/system/system_error.hpp>
 
-#include "rest_cpp/connection.hpp"
+#include "rest_cpp/endpoint.hpp"
 #include "rest_cpp/url.hpp"
 
 namespace beast = boost::beast;
@@ -34,12 +34,12 @@ namespace rest_cpp {
     }
 
     RestClient::~RestClient() noexcept {
-        // Destructor must never throw.
         boost::system::error_code ec;
 
         // Close HTTPS first
         if (m_https_stream) {
-            m_https_stream->shutdown(ec);
+            auto shutdown_result = m_https_stream->shutdown(ec);
+            (void)shutdown_result;  // stop bitching hoe
 
             // Close underlying TCP socket.
             auto r =
@@ -53,7 +53,8 @@ namespace rest_cpp {
 
         // Close HTTP.
         if (m_http_stream) {
-            m_http_stream->socket().close();
+            auto close_result = m_http_stream->socket().close(ec);
+            (void)close_result;  // stop bitching hoe
             m_http_stream.reset();
         }
 
@@ -193,8 +194,10 @@ namespace rest_cpp {
     }
 
     void RestClient::close_http() noexcept {
+        boost::system::error_code ec;
         if (m_http_stream) {
-            m_http_stream->socket().close();
+            auto close_result = m_http_stream->socket().close(ec);
+            (void)close_result;  // stop bitching hoe
             m_http_stream.reset();
         }
         m_connection_details.clear();
@@ -231,10 +234,18 @@ namespace rest_cpp {
     }
 
     void RestClient::close_https() noexcept {
+        boost::system::error_code ec;
+
         if (m_https_stream) {
             // Best effort TLS shutdown (ignore errors).
-            m_https_stream->shutdown();
-            beast::get_lowest_layer(*m_https_stream).socket().close();
+            m_https_stream->shutdown(ec);
+            // These are common/non-fatal during TLS shutdown.
+            if (ec == net::error::eof || ec == ssl::error::stream_truncated) {
+                ec.clear();
+            }
+            auto close_result =
+                beast::get_lowest_layer(*m_https_stream).socket().close(ec);
+            (void)close_result;  // stop bitching hoe
             m_https_stream.reset();
         }
 

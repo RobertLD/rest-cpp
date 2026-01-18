@@ -68,9 +68,9 @@ endif()
 find_package(OpenSSL REQUIRED)
 
 # boost
-find_package(Boost CONFIG QUIET COMPONENTS system )
+find_package(Boost CONFIG 1.80 QUIET COMPONENTS system )
 if (NOT Boost_FOUND)
-  find_package(Boost REQUIRED COMPONENTS system )
+  find_package(Boost 1.80 REQUIRED COMPONENTS system )
 endif()
 
 

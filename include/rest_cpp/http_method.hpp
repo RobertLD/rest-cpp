@@ -2,8 +2,6 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
-#include "rest_cpp/error.hpp"
-#include "rest_cpp/result.hpp"
 namespace http = boost::beast::http;
 
 namespace rest_cpp {

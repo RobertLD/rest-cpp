@@ -5,12 +5,12 @@
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <string>
 
-#include "rest_cpp/connection.hpp"
+#include "rest_cpp/endpoint.hpp"
 
 using namespace rest_cpp;
 
 TEST(ConnectionDetailsTest, ClearResetsFields) {
-    ConnectionDetails details{"example.com", "443", true};
+    EndpointConfig details{"example.com", "443", true};
     details.clear();
     EXPECT_EQ(details.host, "");
     EXPECT_EQ(details.port, "");

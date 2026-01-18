@@ -4,7 +4,6 @@
         {
             "name": "dev-perf",
             "displayName": "Dev (tests+perf)",
-            "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/dev-perf",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo",

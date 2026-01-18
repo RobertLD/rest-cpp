@@ -2,6 +2,8 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
+#include <boost/beast/core/tcp_stream.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/system/error_code.hpp>
 #include <optional>
@@ -10,7 +12,7 @@
 #include "config.hpp"
 #include "request.hpp"
 #include "response.hpp"
-#include "rest_cpp/connection.hpp"
+#include "rest_cpp/endpoint.hpp"
 #include "rest_cpp/url.hpp"
 #include "result.hpp"
 
@@ -51,8 +53,8 @@ namespace rest_cpp {
         std::optional<UrlComponents> m_base_url;
         boost::asio::io_context io_{1};
         tcp::resolver m_resolver{io_};
-        boost::beast::flat_buffer m_buffer;
-        ConnectionDetails m_connection_details{};
+        boost::beast::flat_buffer m_buffer{};
+        EndpointConfig m_connection_details{};
         std::optional<boost::beast::tcp_stream> m_http_stream;
         std::optional<boost::beast::ssl_stream<boost::beast::tcp_stream>>
             m_https_stream;
@@ -70,7 +72,6 @@ namespace rest_cpp {
         void close_https() noexcept;
         bool ensure_https_connected(const UrlComponents& u,
                                     boost::system::error_code& ec);
-        bool m_active_https_connection{false};
     };
 
 }  // namespace rest_cpp
