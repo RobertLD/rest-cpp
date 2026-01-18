@@ -9,7 +9,8 @@
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo",
                 "REST_CPP_BUILD_TESTS": "ON",
-                "REST_CPP_BUILD_PERF": "ON"
+                "REST_CPP_BUILD_PERF": "ON",
+                "CMAKE_TOOLCHAIN_FILE": "${env:HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake"
             }
         }
     ]

@@ -10,6 +10,7 @@
 #include "config.hpp"
 #include "request.hpp"
 #include "response.hpp"
+#include "rest_cpp/connection.hpp"
 #include "rest_cpp/url.hpp"
 #include "result.hpp"
 
@@ -47,10 +48,11 @@ namespace rest_cpp {
        private:
         // Members
         RestClientConfiguration m_config{};
+        std::optional<UrlComponents> m_base_url;
         boost::asio::io_context io_{1};
         tcp::resolver m_resolver{io_};
-        std::string m_port;
-        std::string m_host;
+        boost::beast::flat_buffer m_buffer;
+        ConnectionDetails m_connection_details{};
         std::optional<boost::beast::tcp_stream> m_http_stream;
         std::optional<boost::beast::ssl_stream<boost::beast::tcp_stream>>
             m_https_stream;
@@ -58,18 +60,17 @@ namespace rest_cpp {
             boost::asio::ssl::context::tls_client};
 
         // Internal Helpers
+
         // Http helpers
         void close_http() noexcept;
 
-        bool ensure_http_connected(const ParsedUrl& u,
+        bool ensure_http_connected(const UrlComponents& u,
                                    boost::system::error_code& ec);
         // Https helpers
         void close_https() noexcept;
-        bool ensure_https_connected(const ParsedUrl& u,
+        bool ensure_https_connected(const UrlComponents& u,
                                     boost::system::error_code& ec);
         bool m_active_https_connection{false};
-
-        void init_tls();
     };
 
 }  // namespace rest_cpp

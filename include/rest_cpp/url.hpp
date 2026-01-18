@@ -1,18 +1,24 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 #include "result.hpp"
 
 namespace rest_cpp {
-    struct ParsedUrl {
+
+    struct UrlComponents {
         bool https{false};
         std::string host;
         std::string port;
+        // For a parsed absolute URL: full target (path + optional query).
+        // For a parsed base URL (via parse_base_url): normalized prefix path
+        // ("" or "/api") For a resolved URL: full request target.
         std::string target;
     };
 
     namespace url_utils {
+
         /// @brief Check if a URL is an absolute HTTP or HTTPS URL.
         /// @param s The URL string to check.
         /// @return True if the URL starts with "http://" or "https://".
@@ -29,6 +35,8 @@ namespace rest_cpp {
             return s;
         }
 
+        /// @brief Join a base URL and a relative URI (kept for compatibility /
+        /// non-hot paths).
         inline Result<std::string> combine_base_and_uri(
             std::string_view base_url, std::string_view uri_or_url) {
             auto make_err = [&](std::string msg) -> Result<std::string> {
@@ -38,7 +46,6 @@ namespace rest_cpp {
                 return Result<std::string>::err(std::move(e));
             };
 
-            // If absolute, return that bitch
             if (is_absolute_url_with_protocol(uri_or_url)) {
                 return Result<std::string>::ok(std::string(uri_or_url));
             }
@@ -52,33 +59,45 @@ namespace rest_cpp {
 
             std::string base = trim_trailing_slashes(std::string(base_url));
 
-            // Interpret empty uri as "/"
             if (uri_or_url.empty()) {
                 return Result<std::string>::ok(base + "/");
             }
-
-            // If uri has no leading slash, insert one.
             if (uri_or_url.front() != '/') {
                 return Result<std::string>::ok(base + "/" +
                                                std::string(uri_or_url));
             }
-
-            // Normal case: base + "/path"
             return Result<std::string>::ok(base + std::string(uri_or_url));
         }
 
+        /// @brief Parse a base_url into components suitable for resolving
+        /// relative targets. The returned UrlComponents.target is a *normalized
+        /// prefix*:
+        /// - "/" becomes ""
+        /// - trailing '/' removed
+        /// - query is rejected (to keep prefix joining simple/fast)
+        inline Result<UrlComponents> parse_base_url(std::string_view base_url);
+
+        /// @brief Resolve a request URL (absolute or relative) into
+        /// UrlComponents.
+        /// - If uri_or_url is absolute => parses it (slow path)
+        /// - If relative => requires base (parsed via parse_base_url), then
+        /// joins prefix + relative
+        inline Result<UrlComponents> resolve_url(
+            std::string_view uri_or_url,
+            const UrlComponents* base /*nullable*/);
+
     }  // namespace url_utils
 
-    /// @brief Parse a URL into its components.
+    /// @brief Parse an absolute URL into its components.
     /// @param url The URL string to parse.
-    /// @return A Result containing the ParsedUrl on success, or an Error on
+    /// @return A Result containing the UrlComponents on success, or an Error on
     /// failure.
-    inline Result<ParsedUrl> parse_url(const std::string& url) {
-        auto make_err = [&](std::string msg) -> Result<ParsedUrl> {
+    inline Result<UrlComponents> parse_url(const std::string& url) {
+        auto make_err = [&](std::string msg) -> Result<UrlComponents> {
             Error e{};
             e.message = std::move(msg);
-            e.code = Error::Code::InvalidUrl;  // adjust to your Error scheme
-            return Result<ParsedUrl>::err(std::move(e));
+            e.code = Error::Code::InvalidUrl;
+            return Result<UrlComponents>::err(std::move(e));
         };
 
         std::string_view s(url);
@@ -125,12 +144,101 @@ namespace rest_cpp {
             return make_err("URL has empty host");
         }
 
-        ParsedUrl out;
+        UrlComponents out;
         out.https = https;
         out.host = std::move(host);
         out.port = std::move(port);
         out.target = path.empty() ? "/" : std::string(path);
-        return Result<ParsedUrl>::ok(std::move(out));
+        return Result<UrlComponents>::ok(std::move(out));
     }
+
+    // ---- url_utils implementations ----
+
+    namespace url_utils {
+
+        inline Result<UrlComponents> parse_base_url(std::string_view base_url) {
+            auto make_err = [&](std::string msg) -> Result<UrlComponents> {
+                Error e{};
+                e.message = std::move(msg);
+                e.code = Error::Code::InvalidUrl;
+                return Result<UrlComponents>::err(std::move(e));
+            };
+
+            if (base_url.empty()) {
+                return make_err("base_url is empty");
+            }
+            if (!is_absolute_url_with_protocol(base_url)) {
+                return make_err("base_url must start with http:// or https://");
+            }
+
+            auto parsed = rest_cpp::parse_url(std::string(base_url));
+            if (parsed.has_error())
+                return Result<UrlComponents>::err(parsed.error());
+
+            UrlComponents b = std::move(parsed.value());
+
+            // Normalize prefix in b.target
+            b.target = trim_trailing_slashes(std::move(b.target));
+            if (b.target == "/") b.target.clear();
+
+            // Keep joining simple/fast: reject query in base prefix
+            if (b.target.find('?') != std::string::npos) {
+                return make_err("base_url must not include query parameters");
+            }
+
+            return Result<UrlComponents>::ok(std::move(b));
+        }
+
+        inline Result<UrlComponents> resolve_url(std::string_view uri_or_url,
+                                                 const UrlComponents* base) {
+            auto make_err = [&](std::string msg) -> Result<UrlComponents> {
+                Error e{};
+                e.message = std::move(msg);
+                e.code = Error::Code::InvalidUrl;
+                return Result<UrlComponents>::err(std::move(e));
+            };
+
+            // Absolute URL => parse (slow path)
+            if (is_absolute_url_with_protocol(uri_or_url)) {
+                return rest_cpp::parse_url(std::string(uri_or_url));
+            }
+
+            // Relative => requires base
+            if (base == nullptr || base->host.empty() || base->port.empty()) {
+                return make_err("Relative URI provided but base_url is empty");
+            }
+
+            // Normalize rel: "" => "/", "health" => "/health"
+            std::string_view rel = uri_or_url;
+            std::string rel_storage;
+
+            if (rel.empty()) {
+                rel = "/";
+            } else if (rel.front() != '/') {
+                rel_storage.reserve(rel.size() + 1);
+                rel_storage.push_back('/');
+                rel_storage.append(rel);
+                rel = rel_storage;
+            }
+
+            // Join prefix(base->target) + rel
+            std::string target;
+            if (base->target.empty()) {
+                target.assign(rel);
+            } else {
+                target.reserve(base->target.size() + rel.size());
+                target.append(base->target);  // prefix has no trailing '/'
+                target.append(rel);           // rel begins with '/'
+            }
+
+            UrlComponents out;
+            out.https = base->https;
+            out.host = base->host;
+            out.port = base->port;
+            out.target = std::move(target);
+            return Result<UrlComponents>::ok(std::move(out));
+        }
+
+    }  // namespace url_utils
 
 }  // namespace rest_cpp

@@ -2,6 +2,7 @@
     "cmake.configureSettings": {
         "REST_CPP_BUILD_TESTS": "ON",
         "REST_CPP_BUILD_PERF": "ON",
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_TOOLCHAIN_FILE": "${env:HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake"
     }
 }

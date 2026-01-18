@@ -8,10 +8,22 @@
 #include <boost/system/error_code.hpp>
 
 namespace rest_cpp {
-    inline bool is_same_endpoint(const std::string& cur_host,
-                                 const std::string& cur_port,
-                                 const std::string& new_host,
-                                 const std::string& new_port) {
+    struct ConnectionDetails {
+        std::string host;
+        std::string port;
+        bool https;
+
+        void clear() {
+            host.clear();
+            port.clear();
+            https = false;
+        }
+    };
+
+    inline constexpr bool is_same_endpoint(const std::string_view cur_host,
+                                           const std::string_view cur_port,
+                                           const std::string_view new_host,
+                                           const std::string_view new_port) {
         return cur_host == new_host && cur_port == new_port;
     }
 
@@ -48,4 +60,5 @@ namespace rest_cpp {
         static_cast<void>(
             ssl_context.set_verify_mode(boost::asio::ssl::verify_peer));
     }
+
 }  // namespace rest_cpp

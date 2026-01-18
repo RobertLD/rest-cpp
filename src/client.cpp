@@ -19,8 +19,18 @@ namespace rest_cpp {
         : m_config(std::move(config)),
           io_(1),
           m_resolver(io_),
+          m_buffer(),
           m_ssl_context(boost::asio::ssl::context::tls_client) {
-        init_tls();
+        init_tls_on_ssl_context(m_ssl_context);
+        if (m_config.base_url) {
+            auto base_res =
+                rest_cpp::url_utils::parse_base_url(*m_config.base_url);
+            if (base_res.has_error()) {
+                throw std::runtime_error("Invalid base_url: " +
+                                         base_res.error().message);
+            }
+            m_base_url = std::move(base_res.value());
+        }
     }
 
     RestClient::~RestClient() noexcept {
@@ -47,14 +57,8 @@ namespace rest_cpp {
             m_http_stream.reset();
         }
 
-        m_active_https_connection = false;
-        m_host.clear();
-        m_port.clear();
-    }
-
-    void RestClient::init_tls() {
-        // Load system default CA certificates
-        init_tls_on_ssl_context(m_ssl_context);
+        m_connection_details.https = false;
+        m_connection_details.clear();
     }
 
     const RestClientConfiguration& RestClient::config() const noexcept {
@@ -62,25 +66,16 @@ namespace rest_cpp {
     }
 
     Result<Response> RestClient::send(const Request& request) {
-        // If base_url is missing, only absolute request.url is allowed
-        const std::string_view base = m_config.base_url
-                                          ? std::string_view(*m_config.base_url)
-                                          : std::string_view{};
+        // Resolve URL (fast path for relative, parse for absolute)
+        const rest_cpp::UrlComponents* base =
+            m_base_url ? &*m_base_url : nullptr;
 
-        // Combine base_url and request.url
-        auto abs_url_res =
-            rest_cpp::url_utils::combine_base_and_uri(base, request.url);
+        auto u_res = rest_cpp::url_utils::resolve_url(request.url, base);
+        if (u_res.has_error()) {
+            return Result<Response>::err(u_res.error());
+        }
 
-        // Check for errors in URL combination
-        if (abs_url_res.has_error()) {
-            return Result<Response>::err(abs_url_res.error());
-        }
-        // Parse the absolute URL into a ParsedUrl struct
-        auto parsed_res = rest_cpp::parse_url(abs_url_res.value());
-        if (parsed_res.has_error()) {
-            return Result<Response>::err(parsed_res.error());
-        }
-        const rest_cpp::ParsedUrl& u = parsed_res.value();
+        rest_cpp::UrlComponents parsed_url = std::move(u_res.value());
         const http::verb verb = rest_cpp::to_boost_http_method(request.method);
 
         // IF we don't know the verb, return an error
@@ -90,13 +85,12 @@ namespace rest_cpp {
         }
         // Build request
         http::request<http::string_body> req =
-            prepare_beast_request(request, u, m_config.user_agent);
-
+            prepare_beast_request(request, parsed_url, m_config.user_agent);
         boost::system::error_code ec;
 
         // Establish the connection and do work
-        if (!u.https) {
-            if (!ensure_http_connected(u, ec)) {
+        if (!parsed_url.https) {
+            if (!ensure_http_connected(parsed_url, ec)) {
                 return Result<Response>::err(Error{
                     Error::Code::ConnectionFailed,
                     "Connect failed: " + ec.message(),
@@ -112,9 +106,11 @@ namespace rest_cpp {
                 });
             }
 
-            beast::flat_buffer buffer;
-            http::response<http::string_body> res;
-            http::read(*m_http_stream, buffer, res, ec);
+            m_buffer.consume(m_buffer.size());  // clear but keep capacity
+            http::response_parser<http::string_body> parser;
+            parser.body_limit(m_config.max_body_bytes);
+
+            http::read(*m_http_stream, m_buffer, parser, ec);
             if (ec) {
                 close_http();
                 return Result<Response>::err(Error{
@@ -123,12 +119,12 @@ namespace rest_cpp {
                 });
             }
 
-            Response out = parse_beast_response(res);
+            Response out = parse_beast_response(std::move(parser.get()));
             return Result<Response>::ok(std::move(out));
         }
 
         // HTTPS
-        if (!ensure_https_connected(u, ec)) {
+        if (!ensure_https_connected(parsed_url, ec)) {
             return Result<Response>::err(Error{
                 Error::Code::ConnectionFailed,
                 "Connect failed: " + ec.message(),
@@ -142,9 +138,10 @@ namespace rest_cpp {
                 "Write failed: " + ec.message(),
             });
         }
-        beast::flat_buffer buffer;
-        http::response<http::string_body> res;
-        http::read(*m_https_stream, buffer, res, ec);
+        m_buffer.consume(m_buffer.size());  // clear but keep capacity
+        http::response_parser<http::string_body> parser;
+        parser.body_limit(m_config.max_body_bytes);
+        http::read(*m_https_stream, m_buffer, parser, ec);
         if (ec) {
             close_https();
             return Result<Response>::err(Error{
@@ -153,7 +150,7 @@ namespace rest_cpp {
             });
         }
 
-        Response out = parse_beast_response(res);
+        Response out = parse_beast_response(std::move(parser.get()));
         return Result<Response>::ok(std::move(out));
     }
 
@@ -200,18 +197,18 @@ namespace rest_cpp {
             m_http_stream->socket().close();
             m_http_stream.reset();
         }
-        m_host.clear();
-        m_port.clear();
+        m_connection_details.clear();
     }
 
-    bool RestClient::ensure_http_connected(const ParsedUrl& u,
+    bool RestClient::ensure_http_connected(const UrlComponents& u,
                                            boost::system::error_code& ec) {
         ec = {};
 
         // If same endpoint and socket open, reuse.
 
         if (m_http_stream && m_http_stream->socket().is_open() &&
-            is_same_endpoint(m_host, u.host, m_port, u.port)) {
+            is_same_endpoint(m_connection_details.host,
+                             m_connection_details.port, u.host, u.port)) {
             return true;
         }
 
@@ -228,8 +225,8 @@ namespace rest_cpp {
             return false;
         }
 
-        m_host = u.host;
-        m_port = u.port;
+        m_connection_details.host = u.host;
+        m_connection_details.port = u.port;
         return true;
     }
 
@@ -242,27 +239,28 @@ namespace rest_cpp {
         }
 
         // If this connection was the active one, clear endpoint tracking too.
-        if (m_active_https_connection) {
-            m_active_https_connection = false;
-            m_host.clear();
-            m_port.clear();
+        if (m_connection_details.https) {
+            m_connection_details.https = false;
+            m_connection_details.host.clear();
+            m_connection_details.port.clear();
         }
     }
 
-    bool RestClient::ensure_https_connected(const ParsedUrl& u,
+    bool RestClient::ensure_https_connected(const UrlComponents& u,
                                             boost::system::error_code& ec) {
         ec = {};
 
         // Reuse if same endpoint, scheme matches, and socket open.
-        if (m_https_stream && m_active_https_connection && m_host == u.host &&
-            m_port == u.port &&
+        if (m_https_stream && m_connection_details.https &&
+            m_connection_details.host == u.host &&
+            m_connection_details.port == u.port &&
             beast::get_lowest_layer(*m_https_stream).socket().is_open()) {
             return true;
         }
 
         // If we had an HTTP connection tracked as active, close it when
         // switching schemes.
-        if (!m_host.empty() && !m_active_https_connection) {
+        if (!m_connection_details.host.empty() && !m_connection_details.https) {
             close_http();
         }
         close_https();
@@ -274,8 +272,7 @@ namespace rest_cpp {
 
         // SNI for TLS
         boost::system::error_code sni_ec;
-        set_sni(*m_https_stream, u.host, ec);
-        if (!rest_cpp::set_sni(*m_https_stream, u.host, sni_ec)) {
+        if (!set_sni(*m_https_stream, u.host, sni_ec)) {
             ec = sni_ec;
             close_https();
             return false;
@@ -293,9 +290,9 @@ namespace rest_cpp {
             return false;
         }
 
-        m_active_https_connection = true;
-        m_host = u.host;
-        m_port = u.port;
+        m_connection_details.https = true;
+        m_connection_details.host = u.host;
+        m_connection_details.port = u.port;
         return true;
     }
 

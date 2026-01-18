@@ -26,6 +26,7 @@ set(REST_CPP_CMAKE_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/rest_cpp")
 ### --------------
 add_library(rest_cpp
   src/client.cpp
+  src/async_client.cpp
 )
 add_library(rest_cpp::rest_cpp ALIAS rest_cpp)
 target_compile_features(rest_cpp PUBLIC cxx_std_20)

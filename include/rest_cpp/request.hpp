@@ -1,7 +1,7 @@
 #pragma once
-#include <map>
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 #include "http_method.hpp"
 #include "rest_cpp/url.hpp"
@@ -11,19 +11,19 @@ namespace rest_cpp {
     struct Request {
         HttpMethod method;
         std::string url;
-        std::map<std::string, std::string> headers;
+        std::unordered_map<std::string, std::string> headers;
         std::optional<std::string> body;
     };
 
     struct PreparedRequest {
-        ParsedUrl url;
+        UrlComponents url;
         boost::beast::http::request<boost::beast::http::string_body> beast_req;
     };
 
     /// @brief Apply Request headers into a Boost.Beast header container.
     /// @note Uses `set()`, so duplicate keys overwrite previous values.
     inline void apply_request_headers(
-        const std::map<std::string, std::string>& in,
+        const std::unordered_map<std::string, std::string>& in,
         boost::beast::http::fields& out) {
         for (const auto& [k, v] : in) {
             out.set(k, v);
@@ -31,7 +31,7 @@ namespace rest_cpp {
     }
 
     inline boost::beast::http::request<boost::beast::http::string_body>
-    prepare_beast_request(const Request& req, const ParsedUrl& url,
+    prepare_beast_request(const Request& req, const UrlComponents& url,
                           const std::string& user_agent,
                           const bool keep_alive = true) {
         namespace http = boost::beast::http;
