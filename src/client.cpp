@@ -4,6 +4,7 @@
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/system/system_error.hpp>
 
+#include "rest_cpp/connection.hpp"
 #include "rest_cpp/url.hpp"
 
 namespace beast = boost::beast;
@@ -18,7 +19,7 @@ namespace rest_cpp {
         : m_config(std::move(config)),
           io_(1),
           m_resolver(io_),
-          ssl_ctx_(boost::asio::ssl::context::tls_client) {
+          m_ssl_context(boost::asio::ssl::context::tls_client) {
         init_tls();
     }
 
@@ -53,23 +54,13 @@ namespace rest_cpp {
 
     void RestClient::init_tls() {
         // Load system default CA certificates
-        try {
-            ssl_ctx_.set_default_verify_paths();
-        } catch (const boost::system::system_error& e) {
-            throw std::runtime_error(
-                std::string("Failed to set default verify paths: ") + e.what());
-        }
-
-        /// Configure verification mode + throw out the old one
-        static_cast<void>(
-            ssl_ctx_.set_verify_mode(boost::asio::ssl::verify_peer));
+        init_tls_on_ssl_context(m_ssl_context);
     }
 
     const RestClientConfiguration& RestClient::config() const noexcept {
         return m_config;
     }
 
-    // Keep your send() implementation here (or stub it for now).
     Result<Response> RestClient::send(const Request& request) {
         // If base_url is missing, only absolute request.url is allowed
         const std::string_view base = m_config.base_url
@@ -98,23 +89,9 @@ namespace rest_cpp {
                 Error{Error::Code::Unknown, "Unknown HTTP method"});
         }
         // Build request
-        http::request<http::string_body> req;
-        req.version(11);
-        req.method(verb);
-        req.target(u.target);
+        http::request<http::string_body> req =
+            prepare_beast_request(request, u, m_config.user_agent);
 
-        req.set(http::field::host, u.host);
-        req.set(http::field::user_agent, m_config.user_agent);
-
-        // Keep-alive by default
-        req.keep_alive(true);
-
-        apply_request_headers(request.headers, req.base());
-        // Optional body
-        if (request.body.has_value()) {
-            req.body() = *request.body;
-            req.prepare_payload();
-        }
         boost::system::error_code ec;
 
         // Establish the connection and do work
@@ -146,10 +123,7 @@ namespace rest_cpp {
                 });
             }
 
-            Response out;
-            out.status_code = static_cast<int>(res.result_int());
-            copy_response_headers(res.base(), out.headers);
-            out.body = std::move(res.body());
+            Response out = parse_beast_response(res);
             return Result<Response>::ok(std::move(out));
         }
 
@@ -179,10 +153,7 @@ namespace rest_cpp {
             });
         }
 
-        Response out;
-        out.status_code = static_cast<int>(res.result_int());
-        copy_response_headers(res.base(), out.headers);
-        out.body = std::move(res.body());
+        Response out = parse_beast_response(res);
         return Result<Response>::ok(std::move(out));
     }
 
@@ -238,8 +209,9 @@ namespace rest_cpp {
         ec = {};
 
         // If same endpoint and socket open, reuse.
+
         if (m_http_stream && m_http_stream->socket().is_open() &&
-            m_host == u.host && m_port == u.port) {
+            is_same_endpoint(m_host, u.host, m_port, u.port)) {
             return true;
         }
 
@@ -298,13 +270,13 @@ namespace rest_cpp {
         auto results = m_resolver.resolve(u.host, u.port, ec);
         if (ec) return false;
 
-        m_https_stream.emplace(io_, ssl_ctx_);
+        m_https_stream.emplace(io_, m_ssl_context);
 
         // SNI for TLS
-        if (!SSL_set_tlsext_host_name(m_https_stream->native_handle(),
-                                      u.host.c_str())) {
-            ec = boost::system::error_code(static_cast<int>(::ERR_get_error()),
-                                           net::error::get_ssl_category());
+        boost::system::error_code sni_ec;
+        set_sni(*m_https_stream, u.host, ec);
+        if (!rest_cpp::set_sni(*m_https_stream, u.host, sni_ec)) {
+            ec = sni_ec;
             close_https();
             return false;
         }

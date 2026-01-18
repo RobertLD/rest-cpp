@@ -54,7 +54,7 @@ namespace rest_cpp {
         std::optional<boost::beast::tcp_stream> m_http_stream;
         std::optional<boost::beast::ssl_stream<boost::beast::tcp_stream>>
             m_https_stream;
-        boost::asio::ssl::context ssl_ctx_{
+        boost::asio::ssl::context m_ssl_context{
             boost::asio::ssl::context::tls_client};
 
         // Internal Helpers
