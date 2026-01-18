@@ -8,7 +8,8 @@
 #include <boost/system/error_code.hpp>
 
 namespace rest_cpp {
-    struct EndpointConfig {
+
+    struct Endpoint {
         std::string host;
         std::string port;
         bool https;
@@ -17,6 +18,20 @@ namespace rest_cpp {
             host.clear();
             port.clear();
             https = false;
+        }
+
+        inline void normalize_default_port() {
+            if (port.empty()) port = https ? "443" : "80";
+        }
+
+        inline void normalize_host() {
+            if (host.empty()) host = "localhost";
+            std::transform(host.begin(), host.end(), host.begin(),
+                           [](unsigned char c) { return std::tolower(c); });
+        }
+
+        friend bool operator==(Endpoint const& a, Endpoint const& b) noexcept {
+            return a.https == b.https && a.host == b.host && a.port == b.port;
         }
     };
 
@@ -62,3 +77,24 @@ namespace rest_cpp {
     }
 
 }  // namespace rest_cpp
+
+namespace std {
+    template <>
+    struct hash<rest_cpp::Endpoint> {
+        size_t operator()(rest_cpp::Endpoint const& e) const noexcept {
+            // Any stable combination works; keep it fast.
+            size_t h = 1469598103934665603ull;
+            auto mix = [&](std::string_view s) {
+                for (unsigned char c : s) {
+                    h ^= c;
+                    h *= 1099511628211ull;
+                }
+            };
+            h ^= static_cast<size_t>(e.https);
+            h *= 1099511628211ull;
+            mix(e.host);
+            mix(e.port);
+            return h;
+        }
+    };
+}  // namespace std

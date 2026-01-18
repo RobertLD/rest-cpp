@@ -28,4 +28,9 @@ namespace rest_cpp {
         /// Verify SSL certificates for HTTPS requests.
         bool verify_tls{true};
     };
+
+    struct AsyncRestClientConfiguration : public RestClientConfiguration {
+        /// Maximum number of connections in the connection pool.
+        size_t max_connections{10};
+    };
 }  // namespace rest_cpp

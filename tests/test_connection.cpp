@@ -10,7 +10,7 @@
 using namespace rest_cpp;
 
 TEST(ConnectionDetailsTest, ClearResetsFields) {
-    EndpointConfig details{"example.com", "443", true};
+    Endpoint details{"example.com", "443", true};
     details.clear();
     EXPECT_EQ(details.host, "");
     EXPECT_EQ(details.port, "");

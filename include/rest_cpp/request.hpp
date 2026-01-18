@@ -4,7 +4,7 @@
 #include <unordered_map>
 
 #include "http_method.hpp"
-#include "rest_cpp/url.hpp"
+#include "url.hpp"
 
 namespace rest_cpp {
 

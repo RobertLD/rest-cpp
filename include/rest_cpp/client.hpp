@@ -12,7 +12,7 @@
 #include "config.hpp"
 #include "request.hpp"
 #include "response.hpp"
-#include "rest_cpp/endpoint.hpp"
+#include "rest_cpp/connection.hpp"
 #include "rest_cpp/url.hpp"
 #include "result.hpp"
 
@@ -51,27 +51,22 @@ namespace rest_cpp {
         // Members
         RestClientConfiguration m_config{};
         std::optional<UrlComponents> m_base_url;
+
         boost::asio::io_context io_{1};
         tcp::resolver m_resolver{io_};
-        boost::beast::flat_buffer m_buffer{};
-        EndpointConfig m_connection_details{};
-        std::optional<boost::beast::tcp_stream> m_http_stream;
-        std::optional<boost::beast::ssl_stream<boost::beast::tcp_stream>>
-            m_https_stream;
+
         boost::asio::ssl::context m_ssl_context{
             boost::asio::ssl::context::tls_client};
 
-        // Internal Helpers
+        Connection<Mode::Sync> m_conn{io_.get_executor(), m_ssl_context};
 
-        // Http helpers
-        void close_http() noexcept;
-
-        bool ensure_http_connected(const UrlComponents& u,
-                                   boost::system::error_code& ec);
-        // Https helpers
-        void close_https() noexcept;
-        bool ensure_https_connected(const UrlComponents& u,
-                                    boost::system::error_code& ec);
+        // Helpers
+        [[nodiscard]] inline Result<UrlComponents> resolve_request_url(
+            std::string_view url) const {
+            const rest_cpp::UrlComponents* base =
+                m_base_url ? &*m_base_url : nullptr;
+            return rest_cpp::url_utils::resolve_url(url, base);
+        }
     };
 
 }  // namespace rest_cpp

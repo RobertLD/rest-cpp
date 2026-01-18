@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+
 namespace rest_cpp {
     struct Error {
         enum class Code {
@@ -9,6 +10,7 @@ namespace rest_cpp {
             Timeout,
             SendFailed,
             ReceiveFailed,
+            NetworkError,
             Unknown,
         };
 

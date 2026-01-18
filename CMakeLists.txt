@@ -18,6 +18,9 @@ option(REST_CPP_BUILD_PERF "Build perf benchmarks" OFF)
 option(REST_CPP_INSTALL "Enable install/export packaging" ${_rest_cpp_top_level})
 option(REST_CPP_WARNINGS_AS_ERRORS "Treat warnings as errors" ${_rest_cpp_top_level})
 
+# Useful for IDEs
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Add GNUInstallDirs & set install path variable
 include(GNUInstallDirs)
 set(REST_CPP_CMAKE_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/rest_cpp")
@@ -68,7 +71,7 @@ endif()
 find_package(OpenSSL REQUIRED)
 
 # boost
-find_package(Boost CONFIG 1.80 QUIET COMPONENTS system )
+find_package(Boost CONFIG 1.80 QUIET COMPONENTS system coroutine)
 if (NOT Boost_FOUND)
   find_package(Boost 1.80 REQUIRED COMPONENTS system )
 endif()
@@ -91,6 +94,7 @@ endif()
 target_link_libraries(rest_cpp
   PUBLIC
     Boost::system
+    Boost::coroutine
     OpenSSL::SSL
     OpenSSL::Crypto
     nlohmann_json::nlohmann_json
