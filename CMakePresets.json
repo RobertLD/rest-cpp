@@ -12,6 +12,19 @@
                 "REST_CPP_BUILD_PERF": "ON",
                 "CMAKE_TOOLCHAIN_FILE": "${env:HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake"
             }
+        },
+        {
+            "name": "perf-release",
+            "displayName": "Perf (Release)",
+            "binaryDir": "${sourceDir}/build/perf-release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "REST_CPP_BUILD_TESTS": "ON",
+                "CMAKE_CXX_STANDARD": "20",
+                "REST_CPP_BUILD_PERF": "ON",
+                "INTERPROCEDURAL_OPTIMIZATION": "ON",
+                "CMAKE_TOOLCHAIN_FILE": "${env:HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+            }
         }
     ]
 }

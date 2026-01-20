@@ -8,5 +8,4 @@
     PointerAlignment: Left,
     ReferenceAlignment: Left,
     SeparateDefinitionBlocks: Always
-
 }

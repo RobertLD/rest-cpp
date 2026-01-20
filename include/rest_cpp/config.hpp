@@ -29,8 +29,33 @@ namespace rest_cpp {
         bool verify_tls{true};
     };
 
+    struct AsyncConnectionPoolConfiguration {
+        /// Maximum number of connections in the connection pool.
+        size_t max_total_connections{10};
+        size_t max_connections_per_endpoint{5};
+        std::chrono::milliseconds connection_idle_ttl{30000};  // 30s
+
+        /// Close connections when pruning idle connections
+        bool close_on_prune{true};
+
+        /// Close connections on pool shutdown
+        bool close_on_shutdown{true};
+
+        /// Maximum times a connection can be reused before being discarded
+        size_t max_connection_reuse_count{1000};
+
+        /// Maximum age of a connection before being discarded
+        std::chrono::seconds max_connection_age{300};  // 5 minutes
+
+        /// Number of consecutive failures before opening circuit breaker
+        size_t circuit_breaker_failure_threshold{5};
+
+        /// Time to wait before retrying after circuit breaker opens
+        std::chrono::seconds circuit_breaker_timeout{30};
+    };
+
     struct AsyncRestClientConfiguration : public RestClientConfiguration {
         /// Maximum number of connections in the connection pool.
-        size_t max_connections{10};
+        AsyncConnectionPoolConfiguration pool_config;
     };
 }  // namespace rest_cpp

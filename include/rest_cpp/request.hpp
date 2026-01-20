@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "http_method.hpp"
+#include "rest_cpp/endpoint.hpp"
 #include "url.hpp"
 
 namespace rest_cpp {
@@ -16,7 +17,7 @@ namespace rest_cpp {
     };
 
     struct PreparedRequest {
-        UrlComponents url;
+        Endpoint ep;
         boost::beast::http::request<boost::beast::http::string_body> beast_req;
     };
 

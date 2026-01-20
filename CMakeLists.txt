@@ -30,7 +30,6 @@ set(REST_CPP_CMAKE_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/rest_cpp")
 add_library(rest_cpp
   src/client.cpp
   src/async_client.cpp
-  src/connection_pool.cpp
 )
 add_library(rest_cpp::rest_cpp ALIAS rest_cpp)
 target_compile_features(rest_cpp PUBLIC cxx_std_20)
@@ -119,6 +118,13 @@ if (REST_CPP_BUILD_TESTS)
   enable_testing()
   FetchContent_MakeAvailable(googletest)
 
+  FetchContent_Declare(
+    cpp-httplib
+    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+    GIT_TAG v0.14.3
+  )
+  FetchContent_MakeAvailable(cpp-httplib)
+
   file(GLOB_RECURSE REST_CPP_TEST_SOURCES
     CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp"
@@ -134,7 +140,7 @@ if (REST_CPP_BUILD_TESTS)
       PRIVATE
         GTest::gtest_main
         rest_cpp
-
+        httplib::httplib
     )
     include(GoogleTest)
     gtest_discover_tests(rest_cpp_tests DISCOVERY_MODE PRE_TEST)

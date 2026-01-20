@@ -10,12 +10,21 @@ namespace http = beast::http;
 
 namespace rest_cpp {
 
+    void RestClient::ensure_connection_for(const Endpoint& ep) {
+        if (m_conn && m_conn_endpoint && (*m_conn_endpoint == ep)) {
+            return;
+        }
+
+        m_conn.reset();
+        m_conn_endpoint = ep;
+        m_conn.emplace(io_.get_executor(), m_ssl_context, ep);
+    }
+
     RestClient::RestClient(RestClientConfiguration config)
         : m_config(std::move(config)),
           io_(1),
           m_resolver(io_),
-          m_ssl_context(boost::asio::ssl::context::tls_client),
-          m_conn(io_.get_executor(), m_ssl_context) {
+          m_ssl_context(boost::asio::ssl::context::tls_client) {
         init_tls_on_ssl_context(m_ssl_context);
 
         if (m_config.base_url) {
@@ -30,8 +39,12 @@ namespace rest_cpp {
     }
 
     RestClient::~RestClient() noexcept {
-        m_conn.close_http();
-        m_conn.close_https();
+        if (m_conn) {
+            m_conn->close_http();
+            m_conn->close_https();
+        }
+        m_conn.reset();
+        m_conn_endpoint.reset();
     }
 
     const RestClientConfiguration& RestClient::config() const noexcept {
@@ -39,13 +52,13 @@ namespace rest_cpp {
     }
 
     Result<Response> RestClient::send(const Request& request) {
-        // Resolve URL (fast path for relative, parse for absolute)
+        // Resolve URL (relative vs absolute, base_url handling)
         auto u_res = resolve_request_url(request.url);
         if (u_res.has_error()) {
             return Result<Response>::err(u_res.error());
         }
 
-        rest_cpp::UrlComponents parsed_url = std::move(u_res.value());
+        UrlComponents u = std::move(u_res.value());
 
         // Validate verb like before
         const http::verb verb = rest_cpp::to_boost_http_method(request.method);
@@ -54,16 +67,20 @@ namespace rest_cpp {
                 Error{Error::Code::Unknown, "Unknown HTTP method"});
         }
 
-        // Build PreparedRequest for shared connection code
+        // Build normalized endpoint from URL
+        Endpoint ep = RestClient::endpoint_from_url(u);
+
+        // Ensure we have a connection bound to this endpoint
+        ensure_connection_for(ep);
+
+        // Build PreparedRequest (no UrlComponents stored inside)
         PreparedRequest preq;
-        preq.url = std::move(parsed_url);
-        preq.beast_req = prepare_beast_request(
-            request, preq.url, m_config.user_agent, /*keep_alive=*/true);
+        preq.ep = ep;
+        preq.beast_req = prepare_beast_request(request, u, m_config.user_agent,
+                                               /*keep_alive=*/true);
 
         boost::system::error_code ec;
-        // NOTE: m_conn.request() handles connect + write + read + keepalive
-        // close logic.
-        return m_conn.request(preq, m_resolver, ec);
+        return m_conn->request(preq, m_resolver, ec);
     }
 
     // Convenience methods
