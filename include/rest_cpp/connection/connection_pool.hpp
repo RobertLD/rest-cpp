@@ -9,13 +9,10 @@
 #include <boost/asio/use_awaitable.hpp>
 #include <chrono>
 #include <cstdint>
-#include <deque>
-#include <functional>
-#include <list>
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 #include "rest_cpp/config.hpp"
@@ -261,12 +258,13 @@ namespace rest_cpp {
 
                     // Enqueue into secondary list
                     if (reason == WaitReason::EndpointCapacity) {
-                         auto& b = buckets_[ep];
-                         b.waiters.push_back(&(*my_waiter_it));
-                         my_waiter_it->queue_it = std::prev(b.waiters.end());
+                        auto& b = buckets_[ep];
+                        b.waiters.push_back(&(*my_waiter_it));
+                        my_waiter_it->queue_it = std::prev(b.waiters.end());
                     } else {
                         global_waiters_.push_back(&(*my_waiter_it));
-                        my_waiter_it->queue_it = std::prev(global_waiters_.end());
+                        my_waiter_it->queue_it =
+                            std::prev(global_waiters_.end());
                     }
 
                     metrics_.waiters_total.fetch_add(1,
@@ -298,24 +296,29 @@ namespace rest_cpp {
                 {
                     std::lock_guard<std::mutex> lk(mu_);
                     // ALWAYS erase the waiter, regardless of active status
-                    // The waiter is ours, and we must remove it to keep the list clean
+                    // The waiter is ours, and we must remove it to keep the
+                    // list clean
 
-                    // If we are still active (timeout/cancel), we also need to remove
-                    // from the secondary queue because pop_waiter didn't do it.
+                    // If we are still active (timeout/cancel), we also need to
+                    // remove from the secondary queue because pop_waiter didn't
+                    // do it.
                     if (my_waiter_it->active) {
                         try {
-                            if (my_waiter_it->reason == WaitReason::EndpointCapacity) {
+                            if (my_waiter_it->reason ==
+                                WaitReason::EndpointCapacity) {
                                 // Important: Check if bucket still exists?
-                                // Buckets are usually only created, rarely destroyed from map.
+                                // Buckets are usually only created, rarely
+                                // destroyed from map.
                                 auto it = buckets_.find(ep);
                                 if (it != buckets_.end()) {
-                                    it->second.waiters.erase(my_waiter_it->queue_it);
+                                    it->second.waiters.erase(
+                                        my_waiter_it->queue_it);
                                 }
                             } else {
                                 global_waiters_.erase(my_waiter_it->queue_it);
                             }
-                        } catch(...) {
-                           // Should not happen with valid iterators
+                        } catch (...) {
+                            // Should not happen with valid iterators
                         }
                         metrics_.waiters_total.fetch_sub(
                             1, std::memory_order_relaxed);
@@ -424,9 +427,6 @@ namespace rest_cpp {
             std::size_t reuse_count{0};  ///< Number of times reused
         };
 
-
-
-
         struct Waiter;
 
         ///@brief Per-endpoint bucket with circuit breaker
@@ -461,7 +461,8 @@ namespace rest_cpp {
                                                                /// timeout
             bool active{true};  ///< Whether still waiting
 
-            /// @brief Iterator into the secondary queue (Bucket::waiters or ConnectionPool::global_waiters_)
+            /// @brief Iterator into the secondary queue (Bucket::waiters or
+            /// ConnectionPool::global_waiters_)
             /// @note Used for O(1) removal on timeout/cancel
             std::list<Waiter*>::iterator queue_it;
         };
@@ -533,31 +534,33 @@ namespace rest_cpp {
             // First: try endpoint-specific waiters (O(1))
             auto it = buckets_.find(ep);
             if (it != buckets_.end()) {
-                 auto& b = it->second;
-                 while(!b.waiters.empty()) {
-                     Waiter* w = b.waiters.front();
-                     b.waiters.pop_front(); // Remove from secondary queue
+                auto& b = it->second;
+                while (!b.waiters.empty()) {
+                    Waiter* w = b.waiters.front();
+                    b.waiters.pop_front();  // Remove from secondary queue
 
-                     if (w->active) {
-                         w->active = false;
-                         auto timer = w->timer;
-                         metrics_.waiters_total.fetch_sub(1, std::memory_order_relaxed);
-                         return timer;
-                     }
-                 }
+                    if (w->active) {
+                        w->active = false;
+                        auto timer = w->timer;
+                        metrics_.waiters_total.fetch_sub(
+                            1, std::memory_order_relaxed);
+                        return timer;
+                    }
+                }
             }
 
             // Second: try "any endpoint" / global waiters (O(1))
-            while(!global_waiters_.empty()) {
-                 Waiter* w = global_waiters_.front();
-                 global_waiters_.pop_front(); // Remove from secondary queue
+            while (!global_waiters_.empty()) {
+                Waiter* w = global_waiters_.front();
+                global_waiters_.pop_front();  // Remove from secondary queue
 
-                 if (w->active) {
-                     w->active = false;
-                     auto timer = w->timer;
-                     metrics_.waiters_total.fetch_sub(1, std::memory_order_relaxed);
-                     return timer;
-                 }
+                if (w->active) {
+                    w->active = false;
+                    auto timer = w->timer;
+                    metrics_.waiters_total.fetch_sub(1,
+                                                     std::memory_order_relaxed);
+                    return timer;
+                }
             }
 
             return {};
@@ -793,7 +796,8 @@ namespace rest_cpp {
             buckets_;  ///< Per-endpoint buckets
 
         std::list<Waiter> waiters_;  ///< Stable iterators for removal
-        std::list<Waiter*> global_waiters_; ///< Waiters waiting on global capacity
+        std::list<Waiter*>
+            global_waiters_;  ///< Waiters waiting on global capacity
 
         std::size_t total_in_use_{0};  ///< Total in-use connections
         std::uint64_t next_id_{1};     ///< Next connection ID
