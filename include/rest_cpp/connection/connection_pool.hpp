@@ -9,9 +9,12 @@
 #include <boost/asio/use_awaitable.hpp>
 #include <chrono>
 #include <cstdint>
+#include <deque>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
