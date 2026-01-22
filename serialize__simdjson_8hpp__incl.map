@@ -1,0 +1,22 @@
+<map id="include/rest_cpp/serialize_simdjson.hpp" name="include/rest_cpp/serialize_simdjson.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="459,5,645,45"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="315,101,408,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="511,48,400,98,398,93,509,43"/>
+<area shape="rect" id="Node000003" href="$serialize__impl_8hpp.html" title=" " alt="" coords="432,93,568,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="543,47,521,83,516,80,538,44"/>
+<area shape="rect" id="Node000004" href="$response_8hpp.html" title=" " alt="" coords="497,181,607,207"/>
+<area shape="poly" id="edge9_Node000001_Node000004" title=" " alt="" coords="565,45,583,93,585,113,583,134,569,170,564,168,577,133,580,113,577,94,560,47"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="643,101,720,126"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="582,43,654,91,651,95,579,48"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="515,132,539,168,534,171,510,135"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="5,262,200,287"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="497,208,182,262,181,257,496,202"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="224,262,443,287"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="521,209,379,260,377,255,519,204"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="467,255,637,295"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="555,207,555,241,549,241,549,207"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="661,262,720,287"/>
+<area shape="poly" id="edge7_Node000004_Node000008" title=" " alt="" coords="574,205,660,253,657,258,571,209"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="745,262,869,287"/>
+<area shape="poly" id="edge8_Node000004_Node000009" title=" " alt="" coords="590,204,757,255,756,260,588,209"/>
+</map>

@@ -1,0 +1,22 @@
+var searchData=
+[
+  ['circuit_5fbreaker_5fclosed_0',['circuit_breaker_closed',['../structrest__cpp_1_1ConnectionPoolMetrics.html#a7126e33e7cbd5aa36dd53917c53d2569',1,'rest_cpp::ConnectionPoolMetrics']]],
+  ['circuit_5fbreaker_5ffailure_5fthreshold_1',['circuit_breaker_failure_threshold',['../structrest__cpp_1_1AsyncConnectionPoolConfiguration.html#a82aab41f407a974d3af6633b54e02911',1,'rest_cpp::AsyncConnectionPoolConfiguration']]],
+  ['circuit_5fbreaker_5fopened_2',['circuit_breaker_opened',['../structrest__cpp_1_1ConnectionPoolMetrics.html#aa6a49662495fa9e8abd3c5b574b626ac',1,'rest_cpp::ConnectionPoolMetrics']]],
+  ['circuit_5fbreaker_5ftimeout_3',['circuit_breaker_timeout',['../structrest__cpp_1_1AsyncConnectionPoolConfiguration.html#a8d7abc51357f9a881d4a13af9e6b4bee',1,'rest_cpp::AsyncConnectionPoolConfiguration']]],
+  ['circuit_5fopen_5funtil_4',['circuit_open_until',['../structrest__cpp_1_1ConnectionPool_1_1Bucket.html#a034f51910c925787a095f7283ef33db6',1,'rest_cpp::ConnectionPool::Bucket']]],
+  ['close_5fon_5fprune_5',['close_on_prune',['../structrest__cpp_1_1AsyncConnectionPoolConfiguration.html#ac7547af7df6eda056f2df46a0b769a60',1,'rest_cpp::AsyncConnectionPoolConfiguration']]],
+  ['close_5fon_5fshutdown_6',['close_on_shutdown',['../structrest__cpp_1_1AsyncConnectionPoolConfiguration.html#a7d55b477d8e395e36b620fdf8fefeeaa',1,'rest_cpp::AsyncConnectionPoolConfiguration']]],
+  ['code_7',['code',['../structrest__cpp_1_1Error.html#a71b562adb43ec2135ffce22071f10324',1,'rest_cpp::Error']]],
+  ['conn_8',['conn',['../structrest__cpp_1_1ConnectionPool_1_1IdleEntry.html#a3299ad37e56940ef6c3dada425ad46d5',1,'rest_cpp::ConnectionPool::IdleEntry']]],
+  ['connect_5ftimeout_9',['connect_timeout',['../structrest__cpp_1_1RestClientConfiguration.html#abfcdba10f9b9f7ced4c39dd6ca56d2cf',1,'rest_cpp::RestClientConfiguration']]],
+  ['connection_5fcreated_10',['connection_created',['../structrest__cpp_1_1ConnectionPoolMetrics.html#ab262c815f6a5494fcb5ff138b117a60e',1,'rest_cpp::ConnectionPoolMetrics']]],
+  ['connection_5fdropped_5fage_5flimit_11',['connection_dropped_age_limit',['../structrest__cpp_1_1ConnectionPoolMetrics.html#a1a9ef4da0b153988316923d81f2e13c6',1,'rest_cpp::ConnectionPoolMetrics']]],
+  ['connection_5fdropped_5freuse_5flimit_12',['connection_dropped_reuse_limit',['../structrest__cpp_1_1ConnectionPoolMetrics.html#a0d8e16cfe7761243b2413db116b710cb',1,'rest_cpp::ConnectionPoolMetrics']]],
+  ['connection_5fdropped_5funhealthy_13',['connection_dropped_unhealthy',['../structrest__cpp_1_1ConnectionPoolMetrics.html#ab5892955f69a3d54bfd598aa4300bfc9',1,'rest_cpp::ConnectionPoolMetrics']]],
+  ['connection_5fidle_5fttl_14',['connection_idle_ttl',['../structrest__cpp_1_1AsyncConnectionPoolConfiguration.html#a15f31dd46c5f1215c4af714587fa0ee9',1,'rest_cpp::AsyncConnectionPoolConfiguration']]],
+  ['connection_5fpruned_15',['connection_pruned',['../structrest__cpp_1_1ConnectionPoolMetrics.html#a3a0cb5ee288155e690632e893a917d36',1,'rest_cpp::ConnectionPoolMetrics']]],
+  ['connection_5freused_16',['connection_reused',['../structrest__cpp_1_1ConnectionPoolMetrics.html#a6089abb0da89c9c151028467e0b54967',1,'rest_cpp::ConnectionPoolMetrics']]],
+  ['consecutive_5ffailures_17',['consecutive_failures',['../structrest__cpp_1_1ConnectionPool_1_1Bucket.html#a7952581362c14ec1b228e6798aebfecc',1,'rest_cpp::ConnectionPool::Bucket']]],
+  ['created_18',['created',['../structrest__cpp_1_1ConnectionPool_1_1IdleEntry.html#a3114656f8179dbe0c389016b6be1599b',1,'rest_cpp::ConnectionPool::IdleEntry']]]
+];

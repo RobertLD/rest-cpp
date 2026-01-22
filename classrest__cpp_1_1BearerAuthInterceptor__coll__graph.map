@@ -1,0 +1,5 @@
+<map id="rest_cpp::BearerAuthInterceptor" name="rest_cpp::BearerAuthInterceptor">
+<area shape="rect" id="Node000001" title="Interceptor for Bearer Token authentication." alt="" coords="5,79,235,104"/>
+<area shape="rect" id="Node000002" href="$classrest__cpp_1_1RequestInterceptor.html" title="Interface for intercepting and modifying requests before they are sent." alt="" coords="15,5,225,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="123,44,123,79,117,79,117,44"/>
+</map>

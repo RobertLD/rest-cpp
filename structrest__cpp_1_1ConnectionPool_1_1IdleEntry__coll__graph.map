@@ -1,0 +1,7 @@
+<map id="rest_cpp::ConnectionPool::IdleEntry" name="rest_cpp::ConnectionPool::IdleEntry">
+<area shape="rect" id="Node000001" title="Entry for an idle connection with health tracking." alt="" coords="5,211,192,251"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="19,108,178,148"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="101,162,101,211,96,211,96,162"/>
+<area shape="rect" id="Node000003" href="$classrest__cpp_1_1Connection.html" title="Represents a single network connection to an endpoint." alt="" coords="19,5,178,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="101,59,101,108,96,108,96,59"/>
+</map>

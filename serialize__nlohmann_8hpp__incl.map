@@ -1,0 +1,20 @@
+<map id="include/rest_cpp/serialize_nlohmann.hpp" name="include/rest_cpp/serialize_nlohmann.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="407,5,593,45"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="261,101,408,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="465,48,370,97,367,92,462,43"/>
+<area shape="rect" id="Node000003" href="$serialize__impl_8hpp.html" title=" " alt="" coords="432,93,568,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="503,46,503,79,497,79,497,46"/>
+<area shape="rect" id="Node000004" href="$response_8hpp.html" title=" " alt="" coords="497,181,607,207"/>
+<area shape="poly" id="edge9_Node000001_Node000004" title=" " alt="" coords="536,43,562,64,582,92,587,113,585,134,570,171,565,169,580,133,582,113,578,94,558,68,533,47"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="515,132,539,168,534,171,510,135"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="5,262,200,287"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="497,208,182,262,181,257,496,202"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="224,262,443,287"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="521,209,379,260,377,255,519,204"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="467,255,637,295"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="555,207,555,241,549,241,549,207"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="661,262,720,287"/>
+<area shape="poly" id="edge7_Node000004_Node000008" title=" " alt="" coords="574,205,660,253,657,258,571,209"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="745,262,869,287"/>
+<area shape="poly" id="edge8_Node000004_Node000009" title=" " alt="" coords="590,204,757,255,756,260,588,209"/>
+</map>

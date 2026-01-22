@@ -1,0 +1,21 @@
+<map id="rest_cpp::ConnectionPool::Bucket" name="rest_cpp::ConnectionPool::Bucket">
+<area shape="rect" id="Node000001" title="Per&#45;endpoint bucket with circuit breaker." alt="" coords="1236,67,1423,107"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="911,5,1123,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1133,45,1236,66,1235,71,1132,51"/>
+<area shape="rect" id="Node000003" href="$structrest__cpp_1_1ConnectionPool_1_1IdleEntry.html" title="Entry for an idle connection with health tracking." alt="" coords="507,7,693,47"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="707,24,910,23,910,28,707,29"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="235,43,393,83"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="407,48,506,36,507,41,407,54"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="717,55,887,124"/>
+<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="407,66,417,67,717,83,717,88,417,72,407,71"/>
+<area shape="rect" id="Node000005" href="$classrest__cpp_1_1Connection.html" title="Represents a single network connection to an endpoint." alt="" coords="5,43,164,83"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="178,60,235,60,235,65,178,65"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="901,86,1236,84,1236,90,901,92"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="913,147,1120,187"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="1118,141,1211,117,1259,104,1261,109,1213,123,1119,146"/>
+<area shape="rect" id="Node000008" href="$structrest__cpp_1_1ConnectionPool_1_1Waiter.html" title="Waiter for connection availability." alt="" coords="1236,192,1423,232"/>
+<area shape="poly" id="edge10_Node000008_Node000007" title=" " alt="" coords="1134,181,1236,196,1235,201,1133,186"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="1222,220,1146,213,1103,203,1064,189,1066,184,1105,198,1147,208,1222,214"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="931,237,1102,277"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="1115,246,1212,233,1235,229,1236,235,1212,239,1116,251"/>
+</map>

@@ -1,0 +1,16 @@
+<map id="include/rest_cpp/connection/connection.hpp" name="include/rest_cpp/connection/connection.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="114,5,317,45"/>
+<area shape="rect" id="Node000002" href="$client_8hpp.html" title=" " alt="" coords="5,101,201,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="181,56,120,102,117,98,178,52"/>
+<area shape="rect" id="Node000004" href="$connection__pool_8hpp.html" title=" " alt="" coords="226,93,429,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="253,52,304,91,301,95,250,56"/>
+<area shape="rect" id="Node000003" href="$client_8cpp.html" title=" " alt="" coords="49,189,157,214"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="106,140,106,188,101,188,101,140"/>
+<area shape="rect" id="Node000005" href="$async__client_8hpp.html" title=" " alt="" coords="211,181,382,221"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="318,147,306,182,301,180,313,146"/>
+<area shape="rect" id="Node000007" href="$async__client_8cpp.html" title=" " alt="" coords="343,269,496,295"/>
+<area shape="poly" id="edge7_Node000004_Node000007" title=" " alt="" coords="364,141,381,159,396,180,407,203,414,228,421,268,416,269,409,229,402,205,392,183,377,162,360,145"/>
+<area shape="rect" id="Node000006" href="$pagination_8hpp.html" title=" " alt="" coords="89,269,318,295"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="265,232,219,271,216,267,262,228"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="339,227,403,267,400,271,336,231"/>
+</map>

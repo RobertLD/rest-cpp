@@ -1,0 +1,16 @@
+<map id="rest_cpp::RestClientConfiguration" name="rest_cpp::RestClientConfiguration">
+<area shape="rect" id="Node000001" title="Configuration for the synchronous RestClient." alt="" coords="1036,55,1275,81"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="375,13,461,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="475,20,575,16,711,18,847,27,1071,53,1070,58,847,32,711,23,575,21,475,25"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="690,48,853,88"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="475,31,575,45,690,58,689,63,574,51,475,37"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="41,5,179,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="193,23,375,23,375,28,193,28"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="866,65,1036,65,1036,71,866,71"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="664,113,879,167"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="892,115,1086,78,1087,83,893,120"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="285,120,551,160"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="565,137,664,137,664,143,565,143"/>
+<area shape="rect" id="Node000007" href="$classrest__cpp_1_1RequestInterceptor.html" title="Interface for intercepting and modifying requests before they are sent." alt="" coords="5,127,215,153"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="228,137,285,137,285,143,228,143"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="rest_cpp::ConnectionPoolMetrics" name="rest_cpp::ConnectionPoolMetrics">
+<area shape="rect" id="Node000001" title="Metrics for monitoring connection pool behavior." alt="" coords="118,269,305,309"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,196,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="113,42,206,268,201,270,108,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="220,5,427,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="328,44,329,86,325,139,312,195,301,222,287,247,274,261,259,271,256,267,271,257,283,244,296,220,307,193,320,138,324,86,323,45"/>
+</map>
