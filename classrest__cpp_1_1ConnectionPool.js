@@ -1,0 +1,35 @@
+var classrest__cpp_1_1ConnectionPool =
+[
+    [ "Bucket", "structrest__cpp_1_1ConnectionPool_1_1Bucket.html", "structrest__cpp_1_1ConnectionPool_1_1Bucket" ],
+    [ "IdleEntry", "structrest__cpp_1_1ConnectionPool_1_1IdleEntry.html", "structrest__cpp_1_1ConnectionPool_1_1IdleEntry" ],
+    [ "Lease", "classrest__cpp_1_1ConnectionPool_1_1Lease.html", "classrest__cpp_1_1ConnectionPool_1_1Lease" ],
+    [ "Waiter", "structrest__cpp_1_1ConnectionPool_1_1Waiter.html", "structrest__cpp_1_1ConnectionPool_1_1Waiter" ],
+    [ "Conn", "classrest__cpp_1_1ConnectionPool.html#a63785f1e35af5843a06b6edef167378f", null ],
+    [ "WaitReason", "classrest__cpp_1_1ConnectionPool.html#a2db207fdb9039b251b21ee46012aa972", [
+      [ "EndpointCapacity", "classrest__cpp_1_1ConnectionPool.html#a2db207fdb9039b251b21ee46012aa972a2bed0ebc8bae94a09e1ee975fec4863d", null ],
+      [ "GlobalCapacity", "classrest__cpp_1_1ConnectionPool.html#a2db207fdb9039b251b21ee46012aa972a38bce4e75e862e4fc9bd89b978a01e2c", null ]
+    ] ],
+    [ "ConnectionPool", "classrest__cpp_1_1ConnectionPool.html#a355faf86b04b4c606ef8bb1ad56c7807", null ],
+    [ "ConnectionPool", "classrest__cpp_1_1ConnectionPool.html#ad372e7b24c2dbc6ab3cc6e4ebda87383", null ],
+    [ "ConnectionPool", "classrest__cpp_1_1ConnectionPool.html#a244b24d5bccf8238b311095caed4c8df", null ],
+    [ "~ConnectionPool", "classrest__cpp_1_1ConnectionPool.html#aec433396298f58708863c5ab3798df26", null ],
+    [ "acquire", "classrest__cpp_1_1ConnectionPool.html#a201498c6191e44658cbeab7155417475", null ],
+    [ "check_invariants_locked", "classrest__cpp_1_1ConnectionPool.html#a961484740965ac12a3c09474d520064c", null ],
+    [ "determine_wait_reason_locked", "classrest__cpp_1_1ConnectionPool.html#adad07e5482926cee9789255e1c6dd365", null ],
+    [ "drain", "classrest__cpp_1_1ConnectionPool.html#a20affc33dbf888da27f99a8f23239f9d", null ],
+    [ "is_connection_healthy", "classrest__cpp_1_1ConnectionPool.html#abfc03b610a890a2eabfc10c3bd9a260a", null ],
+    [ "metrics", "classrest__cpp_1_1ConnectionPool.html#ac565b4acedd23b4ca851043bd9b4862d", null ],
+    [ "operator=", "classrest__cpp_1_1ConnectionPool.html#ada1bfd770f9cd2384b097b546f8a60b2", null ],
+    [ "operator=", "classrest__cpp_1_1ConnectionPool.html#ab99cd1305c8ff196a4c9f58e742fc261", null ],
+    [ "pop_waiter_for_endpoint_locked", "classrest__cpp_1_1ConnectionPool.html#ad8cda6fc8daff55661de87ac107cfecb", null ],
+    [ "prune_idle_locked", "classrest__cpp_1_1ConnectionPool.html#ac87326360a50c8ed71b86a096e196981", null ],
+    [ "release", "classrest__cpp_1_1ConnectionPool.html#ae4628b77e8a9df3d1f19e551e0969fce", null ],
+    [ "report_connection_failure", "classrest__cpp_1_1ConnectionPool.html#af63e2f2c2b0ff9c6f2b9b761dbce3588", null ],
+    [ "report_connection_success", "classrest__cpp_1_1ConnectionPool.html#a30516d38d02db4623f8593e4e2362364", null ],
+    [ "report_failure", "classrest__cpp_1_1ConnectionPool.html#a952775f18e50ca55c2f68c77320e55d5", null ],
+    [ "report_success", "classrest__cpp_1_1ConnectionPool.html#a305d450c3d3d902ce5978263f4dbb8c4", null ],
+    [ "shutdown", "classrest__cpp_1_1ConnectionPool.html#a73d375b0db0652579f582e06ac33e867", null ],
+    [ "total_idle_locked", "classrest__cpp_1_1ConnectionPool.html#a8004eba526e9f1448bb6c0c3d19919dc", null ],
+    [ "try_acquire", "classrest__cpp_1_1ConnectionPool.html#ad64e1dc9fb6d6441b71a899cb9ea2b49", null ],
+    [ "try_acquire_locked", "classrest__cpp_1_1ConnectionPool.html#a6b6c2025d4ec9b498e07b03bfab2b1fa", null ]
+];

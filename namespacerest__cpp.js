@@ -1,0 +1,65 @@
+var namespacerest__cpp =
+[
+    [ "url_utils", "namespacerest__cpp_1_1url__utils.html", [
+      [ "combine_base_and_uri", "namespacerest__cpp_1_1url__utils.html#a34e4530fa20227e7a9b796684cb8f752", null ],
+      [ "is_absolute_url_with_protocol", "namespacerest__cpp_1_1url__utils.html#a8ddb450a1448fe613276011e2b6aa5b8", null ],
+      [ "parse_base_url", "namespacerest__cpp_1_1url__utils.html#a0061730ee638227fde09c39fdaa2d66b", null ],
+      [ "resolve_url", "namespacerest__cpp_1_1url__utils.html#a6c9e9723f5050cebbf4b72c0ad4aa507", null ],
+      [ "trim_trailing_slashes", "namespacerest__cpp_1_1url__utils.html#a5200facd0c4be6103f7a4d49365c9f0c", null ],
+      [ "url_encode", "namespacerest__cpp_1_1url__utils.html#ad71e674b64796b19330ec1e16d57f1f2", null ]
+    ] ],
+    [ "ApiKeyInterceptor", "classrest__cpp_1_1ApiKeyInterceptor.html", "classrest__cpp_1_1ApiKeyInterceptor" ],
+    [ "AsyncConnectionPoolConfiguration", "structrest__cpp_1_1AsyncConnectionPoolConfiguration.html", "structrest__cpp_1_1AsyncConnectionPoolConfiguration" ],
+    [ "AsyncPager", "classrest__cpp_1_1AsyncPager.html", "classrest__cpp_1_1AsyncPager" ],
+    [ "AsyncRestClient", "classrest__cpp_1_1AsyncRestClient.html", "classrest__cpp_1_1AsyncRestClient" ],
+    [ "AsyncRestClientConfiguration", "structrest__cpp_1_1AsyncRestClientConfiguration.html", "structrest__cpp_1_1AsyncRestClientConfiguration" ],
+    [ "BearerAuthInterceptor", "classrest__cpp_1_1BearerAuthInterceptor.html", "classrest__cpp_1_1BearerAuthInterceptor" ],
+    [ "Connection", "classrest__cpp_1_1Connection.html", "classrest__cpp_1_1Connection" ],
+    [ "ConnectionPool", "classrest__cpp_1_1ConnectionPool.html", "classrest__cpp_1_1ConnectionPool" ],
+    [ "ConnectionPoolMetrics", "structrest__cpp_1_1ConnectionPoolMetrics.html", "structrest__cpp_1_1ConnectionPoolMetrics" ],
+    [ "Endpoint", "structrest__cpp_1_1Endpoint.html", "structrest__cpp_1_1Endpoint" ],
+    [ "Error", "structrest__cpp_1_1Error.html", "structrest__cpp_1_1Error" ],
+    [ "LinkHeader", "classrest__cpp_1_1LinkHeader.html", null ],
+    [ "Page", "structrest__cpp_1_1Page.html", "structrest__cpp_1_1Page" ],
+    [ "PreparedRequest", "structrest__cpp_1_1PreparedRequest.html", "structrest__cpp_1_1PreparedRequest" ],
+    [ "Request", "structrest__cpp_1_1Request.html", "structrest__cpp_1_1Request" ],
+    [ "RequestInterceptor", "classrest__cpp_1_1RequestInterceptor.html", "classrest__cpp_1_1RequestInterceptor" ],
+    [ "Response", "structrest__cpp_1_1Response.html", "structrest__cpp_1_1Response" ],
+    [ "RestClient", "classrest__cpp_1_1RestClient.html", "classrest__cpp_1_1RestClient" ],
+    [ "RestClientConfiguration", "structrest__cpp_1_1RestClientConfiguration.html", "structrest__cpp_1_1RestClientConfiguration" ],
+    [ "Result", "classrest__cpp_1_1Result.html", "classrest__cpp_1_1Result" ],
+    [ "SimdjsonParser", "classrest__cpp_1_1SimdjsonParser.html", "classrest__cpp_1_1SimdjsonParser" ],
+    [ "UrlComponents", "structrest__cpp_1_1UrlComponents.html", "structrest__cpp_1_1UrlComponents" ],
+    [ "AcquireError", "namespacerest__cpp.html#a86c22fbfc9181a6d6c0213431c3af2c7", [
+      [ "Timeout", "namespacerest__cpp.html#a86c22fbfc9181a6d6c0213431c3af2c7ac85a251cc457840f1e032f1b733e9398", null ],
+      [ "Shutdown", "namespacerest__cpp.html#a86c22fbfc9181a6d6c0213431c3af2c7a1a4ebb180ba59b067782515ffee6e975", null ],
+      [ "InternalError", "namespacerest__cpp.html#a86c22fbfc9181a6d6c0213431c3af2c7a8462b58246e70e5c83e5b939a9332cb5", null ],
+      [ "CircuitOpen", "namespacerest__cpp.html#a86c22fbfc9181a6d6c0213431c3af2c7ab5a8118974b1e0cba2867c6e466e0e7f", null ]
+    ] ],
+    [ "HttpMethod", "namespacerest__cpp.html#a9532b9cf7b58088d1503ed3d088c021b", [
+      [ "Get", "namespacerest__cpp.html#a9532b9cf7b58088d1503ed3d088c021bac55582518cba2c464f29f5bae1c68def", null ],
+      [ "Post", "namespacerest__cpp.html#a9532b9cf7b58088d1503ed3d088c021ba03d947a2158373c3b9d74325850cb8b9", null ],
+      [ "Put", "namespacerest__cpp.html#a9532b9cf7b58088d1503ed3d088c021bad0bf1810982e9728fcf3ac444a015373", null ],
+      [ "Patch", "namespacerest__cpp.html#a9532b9cf7b58088d1503ed3d088c021ba156e10596fdc76ee5300bab931d89c0f", null ],
+      [ "Delete", "namespacerest__cpp.html#a9532b9cf7b58088d1503ed3d088c021baf2a6c498fb90ee345d997f888fce3b18", null ],
+      [ "Head", "namespacerest__cpp.html#a9532b9cf7b58088d1503ed3d088c021ba98921133d10fbdb0fb6dbb7b2648befe", null ],
+      [ "Options", "namespacerest__cpp.html#a9532b9cf7b58088d1503ed3d088c021badae8ace18bdcbcc6ae5aece263e14fe8", null ]
+    ] ],
+    [ "Mode", "namespacerest__cpp.html#a0099ad67acfeff36000ee00dfecb7df8", [
+      [ "Sync", "namespacerest__cpp.html#a0099ad67acfeff36000ee00dfecb7df8ad8e87c0927539672f54462c837be0b7f", null ],
+      [ "Async", "namespacerest__cpp.html#a0099ad67acfeff36000ee00dfecb7df8a24aa4117da86c41684ad25742832dfa6", null ]
+    ] ],
+    [ "apply_request_headers", "namespacerest__cpp.html#a6e520c3364a09e3c0a2417f5458599c1", null ],
+    [ "copy_response_headers", "namespacerest__cpp.html#a0300d9be6fb6ecd603ca730d74a8b675", null ],
+    [ "deserialize", "namespacerest__cpp.html#a5ec2c838114da64bd1d277f4c05287e8", null ],
+    [ "init_tls_on_ssl_context", "namespacerest__cpp.html#a57f6cf1938824f63f028216f269efbc0", null ],
+    [ "is_same_endpoint", "namespacerest__cpp.html#a3f3234180c46dfe1f4fbedd72c0f6d3d", null ],
+    [ "parse_beast_response", "namespacerest__cpp.html#adc8112e21772a1c9900701258d933140", null ],
+    [ "parse_url", "namespacerest__cpp.html#acb6d72aef9c9dec065b8cd5e1d8e9ddb", null ],
+    [ "populate", "namespacerest__cpp.html#a6eab123f1d28a85eaaf68795187dc321", null ],
+    [ "prepare_beast_request", "namespacerest__cpp.html#aa58d6c74dd89fa80bbef8ec4f5fe79ad", null ],
+    [ "set_sni", "namespacerest__cpp.html#a264466fa6fac967fafa98b6e44be24c1", null ],
+    [ "to_boost_http_method", "namespacerest__cpp.html#a5c5ed3f6e78a61b8088684ed15df77db", null ],
+    [ "to_string", "namespacerest__cpp.html#a9c355abaccff76cd45ec16df357da786", null ],
+    [ "update_endpoint", "namespacerest__cpp.html#aa4d9a60ede43d04af13d5c71b31ca4ac", null ]
+];
