@@ -2,7 +2,6 @@
 
 #include <boost/asio/awaitable.hpp>
 #include <optional>
-#include <regex>
 #include <string>
 #include <vector>
 
@@ -29,29 +28,22 @@ namespace rest_cpp {
             if (it == headers.end()) return std::nullopt;
 
             const std::string& link_header = it->second;
-            // Link header can contain multiple links separated by comma
-            // Format: <url>; rel="next", <url>; rel="prev"
             size_t start = 0;
             while (start < link_header.size()) {
                 size_t end = link_header.find(',', start);
-                std::string_view section =
-                    std::string_view(link_header)
-                        .substr(start, (end == std::string::npos)
-                                           ? std::string::npos
-                                           : (end - start));
+                std::string section = (end == std::string::npos)
+                    ? link_header.substr(start)
+                    : link_header.substr(start, end - start);
 
-                // Parse <url>
                 size_t url_start = section.find('<');
                 size_t url_end = section.find('>');
                 if (url_start != std::string::npos &&
                     url_end != std::string::npos && url_end > url_start) {
-                    std::string_view url =
-                        section.substr(url_start + 1, url_end - url_start - 1);
+                    std::string url = section.substr(url_start + 1, url_end - url_start - 1);
 
-                    // Look for rel="next"
                     if (section.find("rel=\"next\"") != std::string::npos ||
                         section.find("rel=next") != std::string::npos) {
-                        return std::string(url);
+                        return url;
                     }
                 }
 
