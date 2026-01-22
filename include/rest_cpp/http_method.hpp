@@ -5,14 +5,17 @@
 namespace http = boost::beast::http;
 
 namespace rest_cpp {
+    /**
+     * @brief Supported HTTP methods.
+     */
     enum class HttpMethod {
-        Get,
-        Post,
-        Put,
-        Patch,
-        Delete,
-        Head,
-        Options,
+        Get,      /**< GET method */
+        Post,     /**< POST method */
+        Put,      /**< PUT method */
+        Patch,    /**< PATCH method */
+        Delete,   /**< DELETE method */
+        Head,     /**< HEAD method */
+        Options,  /**< OPTIONS method */
     };
 
     inline constexpr http::verb to_boost_http_method(HttpMethod method) {

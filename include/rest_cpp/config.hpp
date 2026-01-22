@@ -5,56 +5,62 @@
 #include <string>
 
 namespace rest_cpp {
+    /**
+     * @brief Configuration for the synchronous RestClient.
+     */
     struct RestClientConfiguration {
-        /// Optional base URL for the client. If set, all requests will be
-        /// relative to this URL.
+        /** @brief Optional base URL for the client. */
         std::optional<std::string> base_url;
 
-        /// User-Agent string sent with each request.
+        /** @brief User-Agent string sent with each request. */
         std::string user_agent{"rest_cpp_client/1.0"};
 
-        /// Default headers to include in every request.
+        /** @brief Default headers to include in every request. */
         std::map<std::string, std::string> default_headers;
 
-        /// Timeout for establishing a connection, in milliseconds.
+        /** @brief Timeout for establishing a connection. */
         std::chrono::milliseconds connect_timeout{5000};
 
-        /// Timeout for receiving a response to a request, in milliseconds.
+        /** @brief Timeout for receiving a response. */
         std::chrono::milliseconds request_timeout{5000};
 
-        // Maximum size of response bodies, in bytes.
-        size_t max_body_bytes{static_cast<size_t>(10) * 1024U *
-                              1024U};  // 10 MB
+        /** @brief Maximum size of response bodies in bytes. */
+        size_t max_body_bytes{static_cast<size_t>(10) * 1024U * 1024U};
 
-        /// Verify SSL certificates for HTTPS requests.
+        /** @brief Whether to verify SSL certificates. */
         bool verify_tls{true};
 
-        /// Middleware interceptors for request manipulation.
+        /** @brief Middleware interceptors for request manipulation. */
         std::vector<std::shared_ptr<const class RequestInterceptor>> interceptors;
     };
 
+    /**
+     * @brief Configuration for the asynchronous connection pool.
+     */
     struct AsyncConnectionPoolConfiguration {
-        /// Maximum number of connections in the connection pool.
+        /** @brief Maximum total connections in the pool. */
         size_t max_total_connections{10};
+        /** @brief Maximum connections per endpoint (host:port). */
         size_t max_connections_per_endpoint{5};
-        std::chrono::milliseconds connection_idle_ttl{30000};  // 30s
+        /** @brief Idle connection time-to-live. */
+        std::chrono::milliseconds connection_idle_ttl{30000};
 
-        /// Close connections when pruning idle connections
+        /** @brief Whether to close connections when pruning idle ones. */
         bool close_on_prune{true};
 
-        /// Close connections on pool shutdown
+        /** @brief Whether to close connections on pool shutdown. */
         bool close_on_shutdown{true};
 
-        /// Maximum times a connection can be reused before being discarded
+        /** @brief Max requests per connection before forcing rotation. */
         size_t max_connection_reuse_count{1000};
 
-        /// Maximum age of a connection before being discarded
-        std::chrono::seconds max_connection_age{300};  // 5 minutes
+        /** @brief Max lifetime of any single connection. */
+        std::chrono::seconds max_connection_age{300};
 
-        /// Number of consecutive failures before opening circuit breaker
+        /** @brief Consecutive failures triggering circuit breaker. */
         size_t circuit_breaker_failure_threshold{5};
 
-        /// Time to wait before retrying after circuit breaker opens
+        /** @brief Duration the circuit breaker remains open after tripping. */
         std::chrono::seconds circuit_breaker_timeout{30};
     };
 

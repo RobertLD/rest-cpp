@@ -7,13 +7,23 @@
 
 namespace rest_cpp {
 
+    /**
+     * @brief Components of a parsed or resolved URL.
+     */
     struct UrlComponents {
+        /** @brief Whether to use HTTPS. */
         bool https{false};
+        /** @brief The hostname. */
         std::string host;
+        /** @brief The port number. */
         std::string port;
-        // For a parsed absolute URL: full target (path + optional query).
-        // For a parsed base URL (via parse_base_url): normalized prefix path
-        // ("" or "/api") For a resolved URL: full request target.
+        /**
+         * @brief The request target (path + query).
+         *
+         * For a parsed absolute URL: full target (path + optional query).
+         * For a parsed base URL (via parse_base_url): normalized prefix path ("" or "/api").
+         * For a resolved URL: full request target.
+         */
         std::string target;
     };
 

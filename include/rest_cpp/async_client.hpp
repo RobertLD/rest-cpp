@@ -18,29 +18,77 @@
 
 namespace rest_cpp {
 
+    /**
+     * @brief An asynchronous REST client using C++20 coroutines.
+     *
+     * This class provides a thread-safe, non-blocking interface for making HTTP/HTTPS requests.
+     * It uses a ConnectionPool internally to manage persistent connections and is designed for
+     * high-concurrency environments.
+     */
     class AsyncRestClient {
        public:
+        /**
+         * @brief Constructs an AsyncRestClient.
+         * @param ex The executor to use for asynchronous operations (e.g., from boost::asio::this_coro::executor).
+         * @param cfg The configuration for the client and its internal connection pool.
+         */
         explicit AsyncRestClient(boost::asio::any_io_executor ex,
                                  AsyncRestClientConfiguration cfg);
 
+        /**
+         * @brief Sends a manual request asynchronously.
+         * @param request The request object.
+         * @return An awaitable Result containing the Response or an Error.
+         */
         boost::asio::awaitable<Result<Response>> send(Request request);
 
+        /**
+         * @brief Performs an asynchronous GET request.
+         * @param url The target URL or path.
+         * @return An awaitable Result.
+         */
         boost::asio::awaitable<Result<Response>> get(std::string url);
+
+        /**
+         * @brief Performs an asynchronous POST request.
+         * @param url The target URL or path.
+         * @param body The request body.
+         * @return An awaitable Result.
+         */
         boost::asio::awaitable<Result<Response>> post(std::string url,
                                                       std::string body);
 
-        // Templated versions of common methods
+        /**
+         * @name Templated versions for automatic serialization
+         * These methods automatically deserialize the JSON response body into a DTO of type T.
+         * @{
+         */
+
+        /**
+         * @brief Performs an asynchronous GET request and deserializes the response.
+         * @tparam T The type to deserialize into.
+         * @param url The target URL or path.
+         * @return An awaitable Result containing the deserialized object or an Error.
+         */
         template <typename T>
         boost::asio::awaitable<Result<T>> get(std::string url) {
             co_return to_result_t<T>(co_await get(std::move(url)));
         }
 
+        /**
+         * @brief Performs an asynchronous POST request and deserializes the response.
+         * @tparam T The type to deserialize into.
+         * @param url The target URL or path.
+         * @param body The request body.
+         * @return An awaitable Result containing the deserialized object or an Error.
+         */
         template <typename T>
         boost::asio::awaitable<Result<T>> post(std::string url,
                                                std::string body) {
             co_return to_result_t<T>(
                 co_await post(std::move(url), std::move(body)));
         }
+        /** @} */
 
        private:
         template <typename T>

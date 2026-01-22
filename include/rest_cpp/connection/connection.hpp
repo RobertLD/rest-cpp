@@ -22,8 +22,16 @@
 
 namespace rest_cpp {
 
-    enum class Mode { Sync, Async };
+    /** @brief Communication mode for connections. */
+    enum class Mode {
+        Sync,  /**< Blocking operations. */
+        Async  /**< Non-blocking operations using coroutines. */
+    };
 
+    /**
+     * @brief Represents a single network connection to an endpoint.
+     * @tparam mode The communication mode (Sync or Async).
+     */
     template <Mode mode>
     class Connection {
        private:
@@ -42,6 +50,12 @@ namespace rest_cpp {
                                boost::asio::awaitable<Result<Response>>>;
 
        public:
+        /**
+         * @brief Constructs a Connection.
+         * @param executor The executor to use.
+         * @param ssl_ctx The SSL context for HTTPS.
+         * @param endpoint The target endpoint.
+         */
         Connection(boost::asio::any_io_executor executor,
                    boost::asio::ssl::context& ssl_ctx, Endpoint endpoint)
             : m_ex(std::move(executor)),
@@ -99,6 +113,12 @@ namespace rest_cpp {
             }
         }
 
+        /**
+         * @brief Ensures the connection is open, performing DNS and handshake if needed.
+         * @param resolver The DNS resolver.
+         * @param ec Error code output (Sync mode only).
+         * @return In Sync mode: error code. In Async mode: awaitable error code.
+         */
         ensure_ret_t ensure_connected(tcp::resolver& resolver,
                                       boost::system::error_code& ec) {
             if constexpr (mode == Mode::Sync) {
@@ -123,8 +143,14 @@ namespace rest_cpp {
             }
         }
 
+        /**
+         * @brief Returns the endpoint this connection is tied to.
+         */
         Endpoint endpoint() const { return m_endpoint; }
 
+        /**
+         * @brief Checks if the connection is currently open and healthy.
+         */
         bool is_healthy() const noexcept {
             return std::visit(
                 [](auto const& s) -> bool {

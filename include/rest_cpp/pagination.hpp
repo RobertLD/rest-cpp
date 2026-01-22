@@ -12,10 +12,15 @@
 
 namespace rest_cpp {
 
-    /// @brief Represents a single page of results.
+    /**
+     * @brief Represents a single page of results in a paginated collection.
+     * @tparam T The type of items in the page.
+     */
     template <typename T>
     struct Page {
+        /** @brief The list of items on this page. */
         std::vector<T> items;
+        /** @brief The URL to the next page, if available. */
         std::optional<std::string> next_url;
     };
 

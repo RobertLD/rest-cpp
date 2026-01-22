@@ -9,21 +9,35 @@
 
 namespace rest_cpp {
 
-    /// @brief Interface for intercepting and modifying requests before they are
-    /// sent.
+    /**
+     * @brief Interface for intercepting and modifying requests before they are sent.
+     *
+     * Interceptors can be used for cross-cutting concerns like authentication,
+     * logging, or adding custom headers to every request.
+     */
     class RequestInterceptor {
        public:
         virtual ~RequestInterceptor() = default;
 
-        /// @brief Perform modifications on the outgoing request.
-        /// @param req The request to modify.
-        /// @param url The resolved URL components for the request.
+        /**
+         * @brief Performs modifications on the outgoing request.
+         * @param req The request object to modify.
+         * @param url The resolved URL components for the request.
+         */
         virtual void prepare(Request& req, const UrlComponents& url) const = 0;
     };
 
-    /// @brief Interceptor for Bearer Token authentication.
+    /**
+     * @brief Interceptor for Bearer Token authentication.
+     *
+     * Adds an `Authorization: Bearer <token>` header to the request.
+     */
     class BearerAuthInterceptor : public RequestInterceptor {
        public:
+        /**
+         * @brief Constructs a BearerAuthInterceptor.
+         * @param token The bearer token to use.
+         */
         explicit BearerAuthInterceptor(std::string token)
             : token_(std::move(token)) {}
 
@@ -36,11 +50,25 @@ namespace rest_cpp {
         std::string token_;
     };
 
-    /// @brief Interceptor for API Key authentication.
+    /**
+     * @brief Interceptor for API Key authentication.
+     *
+     * Adds an API key either as a header or as a query parameter.
+     */
     class ApiKeyInterceptor : public RequestInterceptor {
        public:
-        enum class Location : std::uint8_t { Header, Query };
+        /** @brief Specifies where the API key should be placed. */
+        enum class Location : std::uint8_t {
+            Header, /**< Place in an HTTP header. */
+            Query   /**< Place in the URL query string. */
+        };
 
+        /**
+         * @brief Constructs an ApiKeyInterceptor.
+         * @param key The name of the header or query parameter.
+         * @param value The value of the API key.
+         * @param loc Where to place the key (Header or Query).
+         */
         explicit ApiKeyInterceptor(std::string key, std::string value,
                                    Location loc = Location::Header)
             : key_(std::move(key)), value_(std::move(value)), loc_(loc) {}

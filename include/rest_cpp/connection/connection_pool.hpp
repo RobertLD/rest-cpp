@@ -57,10 +57,22 @@ namespace rest_cpp {
      * 5. Destruction: Calls shutdown(), closes connections if configured
      */
 
+    /**
+     * @brief A thread-safe connection pool for asynchronous HTTP/HTTPS connections.
+     *
+     * The ConnectionPool manages a set of persistent connections to multiple endpoints.
+     * It handles connection reuse, timeouts, and concurrency limits.
+     */
     class ConnectionPool {
        public:
         using Conn = Connection<Mode::Async>;
 
+        /**
+         * @brief A handle to an acquired connection.
+         *
+         * Leases are RAII objects that return the connection to the pool when destroyed.
+         * They provide access to the underlying connection via the `->` and `*` operators.
+         */
         class Lease {
            public:
             Lease() = default;
@@ -218,21 +230,25 @@ namespace rest_cpp {
             }
         }
 
-        /// @brief Try to acquire a connection immediately, returns nullopt if
-        /// none
-        /// @note Non-blocking, does not wait
+        /**
+         * @brief Attempts to acquire a connection immediately without waiting.
+         * @param endpoint The target endpoint.
+         * @return An optional Lease if a connection was available, otherwise std::nullopt.
+         * @note This is a non-blocking call.
+         */
         std::optional<Lease> try_acquire(Endpoint endpoint) {
             normalize_endpoint(endpoint);
             std::lock_guard<std::mutex> lock(mu_);
             return try_acquire_locked(endpoint);
         }
 
-        /// @brief Asynchronously acquire a connection lease
-        /// @param ep Endpoint to connect to
-        /// @param timeout Maximum time to wait for a connection
-        /// @return Result containing Lease on success or AcquireError on
-        /// failure
-        /// @note Coroutine that may suspend
+        /**
+         * @brief Asynchronously acquires a connection lease.
+         * @param endpoint The target endpoint.
+         * @param timeout Maximum time to wait for a connection to become available.
+         * @return A Result containing the Lease on success, or an Error on failure (e.g., Timeout).
+         * @note This is a coroutine and may suspend.
+         */
         boost::asio::awaitable<Result<Lease>> acquire(
             Endpoint endpoint, std::chrono::steady_clock::duration timeout =
                                    std::chrono::steady_clock::duration::max()) {
@@ -376,7 +392,9 @@ namespace rest_cpp {
             }
         }
 
-        /// Shutdown the pool immediately, canceling all waiters
+        /**
+         * @brief Shuts down the pool immediately, canceling all pending acquisition requests.
+         */
         void shutdown() {
             m_state->alive.store(false, std::memory_order_release);
 
@@ -498,11 +516,11 @@ namespace rest_cpp {
             std::list<Waiter*>::iterator queue_it;
         };
 
-        /// @brief Normalize endpoint (default port, lowercase host)
-        /// @param ep Endpoint to normalize
-        /// @note Modifies the endpoint in place
-        /// @note Called before any public method
-        /// @note Super basic, just lowercases everything
+        /**
+         * @brief Normalize endpoint (default port, lowercase host)
+         * @param endpoint Endpoint to normalize
+         * @note Modifies the endpoint in place
+         */
         static void normalize_endpoint(Endpoint& endpoint) {
             endpoint.normalize_default_port();
             endpoint.normalize_host();
@@ -630,8 +648,10 @@ namespace rest_cpp {
             }
         }
 
-        /// @brief Report connection failure for circuit breaker
-        /// @param ep Endpoint of the failed connection
+        /**
+         * @brief Report connection failure for circuit breaker
+         * @param endpoint Endpoint of the failed connection
+         */
         void report_connection_failure(Endpoint const& endpoint) {
             std::lock_guard<std::mutex> lock(mu_);
             auto& bucket = m_buckets[endpoint];
@@ -647,8 +667,10 @@ namespace rest_cpp {
             }
         }
 
-        /// @brief Report connection success for circuit breaker
-        /// @param ep Endpoint of the successful connection
+        /**
+         * @brief Report connection success for circuit breaker
+         * @param endpoint Endpoint of the successful connection
+         */
         void report_connection_success(Endpoint const& endpoint) {
             std::lock_guard<std::mutex> lock(mu_);
             auto bucket_iter = m_buckets.find(endpoint);

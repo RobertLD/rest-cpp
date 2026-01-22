@@ -2,30 +2,93 @@
     "version": 3,
     "configurePresets": [
         {
-            "name": "DEV",
-            "displayName": "Dev (tests+perf)",
-            "binaryDir": "${sourceDir}/build/",
+            "name": "base-unix",
+            "hidden": true,
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-                "REST_CPP_BUILD_TESTS": "ON",
                 "CMAKE_CXX_STANDARD": "20",
-                "REST_CPP_BUILD_PERF": "ON",
                 "CMAKE_C_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_TOOLCHAIN_FILE": "${env:HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake"
             }
         },
         {
+            "name": "debug",
+            "displayName": "Debug",
+            "inherits": "base-unix",
+            "binaryDir": "${sourceDir}/build/debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "REST_CPP_BUILD_TESTS": "ON"
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "Release",
+            "inherits": "base-unix",
+            "binaryDir": "${sourceDir}/build/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "REST_CPP_BUILD_TESTS": "OFF"
+            }
+        },
+        {
+            "name": "relwithdebinfo",
+            "displayName": "RelWithDebInfo",
+            "inherits": "base-unix",
+            "binaryDir": "${sourceDir}/build/relwithdebinfo",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "REST_CPP_BUILD_TESTS": "ON"
+            }
+        },
+        {
+            "name": "DEV",
+            "displayName": "Dev (tests+perf)",
+            "inherits": "base-unix",
+            "binaryDir": "${sourceDir}/build/dev",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "REST_CPP_BUILD_TESTS": "ON",
+                "REST_CPP_BUILD_PERF": "ON"
+            }
+        },
+        {
             "name": "perf-release",
             "displayName": "Perf (Release)",
+            "inherits": "base-unix",
             "binaryDir": "${sourceDir}/build/perf-release",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "REST_CPP_BUILD_TESTS": "ON",
-                "CMAKE_CXX_STANDARD": "20",
                 "REST_CPP_BUILD_PERF": "ON",
-                "INTERPROCEDURAL_OPTIMIZATION": "ON",
-                "CMAKE_TOOLCHAIN_FILE": "${env:HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+                "INTERPROCEDURAL_OPTIMIZATION": "ON"
+            }
+        },
+        {
+            "name": "asan",
+            "displayName": "Address Sanitizer",
+            "inherits": "base-unix",
+            "binaryDir": "${sourceDir}/build/asan",
+            "environment": {
+                "ASAN_OPTIONS": "detect_leaks=1:color=always"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "REST_CPP_BUILD_TESTS": "ON",
+                "CMAKE_CXX_FLAGS_DEBUG": "-fsanitize=address -fno-omit-frame-pointer",
+                "CMAKE_EXE_LINKER_FLAGS_DEBUG": "-fsanitize=address"
+            }
+        },
+        {
+            "name": "tsan",
+            "displayName": "Thread Sanitizer",
+            "inherits": "base-unix",
+            "binaryDir": "${sourceDir}/build/tsan",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "REST_CPP_BUILD_TESTS": "ON",
+                "CMAKE_CXX_FLAGS_DEBUG": "-fsanitize=thread",
+                "CMAKE_EXE_LINKER_FLAGS_DEBUG": "-fsanitize=thread"
             }
         }
     ]

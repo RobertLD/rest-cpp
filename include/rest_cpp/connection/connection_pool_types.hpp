@@ -7,11 +7,14 @@ namespace rest_cpp {
 
     /// @brief Error codes for connection acquisition failures
 
+    /**
+     * @brief Error codes for connection acquisition failures.
+     */
     enum class AcquireError {
-        Timeout,   ///< Timeout expired, resource may become available later
-        Shutdown,  ///< Pool is shutting down, will never succeed
-        InternalError,  ///< Unexpected error (e.g., timer failure)
-        CircuitOpen     ///< Circuit breaker open for this endpoint
+        Timeout,      /**< Timeout expired, resource may become available later. */
+        Shutdown,     /**< Pool is shutting down, will never succeed. */
+        InternalError,/**< Unexpected error (e.g., timer failure). */
+        CircuitOpen   /**< Circuit breaker open for this endpoint. */
     };
 
     /// @brief Convert AcquireError to string for logging or diagnostics

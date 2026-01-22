@@ -8,9 +8,15 @@
 
 namespace rest_cpp {
 
+    /**
+     * @brief Represents an HTTP response.
+     */
     struct Response {
+        /** @brief HTTP status code (e.g., 200, 404). */
         int status_code{0};
+        /** @brief HTTP response headers. */
         std::unordered_map<std::string, std::string> headers;
+        /** @brief HTTP response body as a string. */
         std::string body;
     };
 

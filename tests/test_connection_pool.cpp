@@ -29,7 +29,8 @@ namespace {
     Endpoint make_ep(std::string host = "localhost", int port = 80) {
         Endpoint ep;
         ep.host = std::move(host);
-        ep.port = port;
+        ep.port = std::to_string(port);
+        ep.https = false;
         return ep;
     }
 

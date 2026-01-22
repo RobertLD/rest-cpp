@@ -45,3 +45,5 @@ build/
 CMakeFiles/
 CMakeCache.txt
 .cache/
+
+docs

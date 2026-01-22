@@ -9,10 +9,17 @@
 
 namespace rest_cpp {
 
+    /**
+     * @brief Represents an HTTP request.
+     */
     struct Request {
+        /** @brief The HTTP method (GET, POST, etc.). */
         HttpMethod method;
+        /** @brief The target URL or path. */
         std::string url;
+        /** @brief HTTP request headers. */
         std::unordered_map<std::string, std::string> headers;
+        /** @brief Optional HTTP request body. */
         std::optional<std::string> body;
     };
 

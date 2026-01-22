@@ -9,9 +9,15 @@
 
 namespace rest_cpp {
 
+    /**
+     * @brief Represents a network endpoint (host, port, and protocol).
+     */
     struct Endpoint {
+        /** @brief The hostname or IP address. */
         std::string host;
+        /** @brief The port number as a string. */
         std::string port;
+        /** @brief Whether to use HTTPS (TLS). */
         bool https;
 
         void clear() {
