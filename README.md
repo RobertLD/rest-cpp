@@ -7,17 +7,18 @@ It is designed for low-latency, high-throughput applications, offering both a si
 ## Features
 
 - **Protocol Support**: HTTP/1.1, HTTPS (TLS).
-- **Asynchronous First**: Built-in support for C++20 coroutines (`co_await`).
+- **Asynchronous**: Built-in support for C++20 coroutines (`co_await`).
 - **Connection Pooling**:
-  - Robust persistent connection pooling with keep-alive support.
+  - Persistent connection pooling with keep-alive support.
   - Configurable strict limits (per-endpoint and global).
-  - Just-in-Time connection creation and intelligent reuse strategies.
+  - Just-in-Time connection creation and reuse strategies.
 - **Circuit Breaker**: Automatic failure detection and temporary circuit breaking for unstable endpoints.
 - **Thread Safety**: Fully thread-safe asynchronous client and connection pool.
 - **Performance**:
-  - O(1) waiter scheduling for high-concurrency pool access.
+  - Waiter scheduling for high-concurrency pool access.
   - Zero-copy semantics where possible.
-  - Optimized for high request-per-second loads.
+- **Middleware Support**: Intercept and modify requests (e.g., for authentication) via a flexible interceptor interface.
+- **Automatic JSON Serialization**: Deserialize responses into C++ DTOs using `nlohmann/json` or `simdjson`.
 
 ## Requirements
 
@@ -30,7 +31,7 @@ It is designed for low-latency, high-throughput applications, offering both a si
 
 ### Using CMake & vcpkg (Recommended)
 
-This project uses `CMakePresets.json` for easy configuration. We recommend using `vcpkg` to manage dependencies.
+This project uses `CMakePresets.json` for easy configuration.
 
 1. **Clone the repository**:
    ```bash
@@ -40,7 +41,7 @@ This project uses `CMakePresets.json` for easy configuration. We recommend using
 
 2. **Configure and Build**:
    ```bash
-   # Configure using the default preset (adjust preset name as needed)
+   # Configure using the default preset
    cmake --preset default
 
    # Build
@@ -90,7 +91,66 @@ int main() {
 }
 ```
 
-### 2. Asynchronous Client (`AsyncRestClient`)
+### 2. JSON Serialization & Deserialization
+
+The library supports automatic deserialization of JSON responses into your C++ structs (DTOs).
+
+#### Nlohmann/JSON (Default-ish)
+Include `<rest_cpp/serialize_nlohmann.hpp>` and define your DTOs using nlohmann's macros.
+
+```cpp
+#include <rest_cpp/client.hpp>
+#include <rest_cpp/serialize_nlohmann.hpp>
+#include <iostream>
+
+struct User {
+    int id;
+    std::string name;
+};
+// Map JSON fields to struct members
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(User, id, name)
+
+int main() {
+    rest_cpp::RestClient client({});
+
+    // Use the templated version of get<T>
+    auto result = client.get<User>("https://api.example.com/users/1");
+
+    if (result) {
+        User user = result.value();
+        std::cout << "User: " << user.name << " (ID: " << user.id << ")\n";
+    }
+}
+```
+
+### 3. Middleware / Interceptors
+
+You can apply logic to Every request (like authentication) using Interceptors.
+
+```cpp
+#include <rest_cpp/client.hpp>
+#include <rest_cpp/middleware.hpp>
+
+int main() {
+    rest_cpp::RestClientConfiguration config;
+
+    // Add built-in Bearer Auth interceptor
+    config.interceptors.push_back(
+        std::make_shared<rest_cpp::BearerAuthInterceptor>("your-token-here")
+    );
+
+    // Or use an API Key in query params
+    config.interceptors.push_back(
+        std::make_shared<rest_cpp::ApiKeyInterceptor>(
+            "api_key", "value", rest_cpp::ApiKeyInterceptor::Location::Query)
+    );
+
+    rest_cpp::RestClient client(config);
+    // All subsequent requests from 'client' will have the token/key applied.
+}
+```
+
+### 4. Asynchronous Client (`AsyncRestClient`)
 
  Uses C++20 coroutines.
 
