@@ -21,6 +21,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y doxygen graphviz
 
+      - name: Download Doxygen Awesome Theme
+        run: |
+          mkdir -p doxygen-awesome
+          curl -sL https://raw.githubusercontent.com/jothepro/doxygen-awesome-css/main/doxygen-awesome.css -o doxygen-awesome/doxygen-awesome.css
+          curl -sL https://raw.githubusercontent.com/jothepro/doxygen-awesome-css/main/doxygen-awesome-sidebar-only.css -o doxygen-awesome/doxygen-awesome-sidebar-only.css
+          curl -sL https://raw.githubusercontent.com/jothepro/doxygen-awesome-css/main/doxygen-awesome-darkmode-toggle.js -o doxygen-awesome/doxygen-awesome-darkmode-toggle.js
+          curl -sL https://raw.githubusercontent.com/jothepro/doxygen-awesome-css/main/doxygen-awesome-fragment-copy-button.js -o doxygen-awesome/doxygen-awesome-fragment-copy-button.js
+          curl -sL https://raw.githubusercontent.com/jothepro/doxygen-awesome-css/main/doxygen-awesome-paragraph-link.js -o doxygen-awesome/doxygen-awesome-paragraph-link.js
+          curl -sL https://raw.githubusercontent.com/jothepro/doxygen-awesome-css/main/doxygen-awesome-interactive-toc.js -o doxygen-awesome/doxygen-awesome-interactive-toc.js
+
       - name: Generate Documentation
         run: doxygen Doxyfile
 
