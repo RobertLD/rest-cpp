@@ -15,6 +15,7 @@
 #include "serialize_impl.hpp"
 
 namespace rest_cpp {
+    using boost::asio::ip::tcp;
 
     /**
      * @brief A synchronous REST client.
