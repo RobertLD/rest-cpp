@@ -15,10 +15,10 @@
 #include <boost/system/system_error.hpp>
 #include <variant>
 
-#include "rest_cpp/endpoint.hpp"  // Endpoint, set_sni, init_tls_on_ssl_context
-#include "rest_cpp/request.hpp"   // PreparedRequest
-#include "rest_cpp/response.hpp"  // Response, parse_beast_response
-#include "rest_cpp/result.hpp"    // Result, Error
+#include "../endpoint.hpp"  // Endpoint, set_sni, init_tls_on_ssl_context
+#include "../request.hpp"   // PreparedRequest
+#include "../response.hpp"  // Response, parse_beast_response
+#include "../result.hpp"    // Result, Error
 
 namespace rest_cpp {
 
@@ -42,14 +42,19 @@ namespace rest_cpp {
                                boost::asio::awaitable<Result<Response>>>;
 
        public:
-        Connection(boost::asio::any_io_executor ex,
-                   boost::asio::ssl::context& ssl_ctx, Endpoint ep)
-            : m_ex(std::move(ex)),
+        Connection(boost::asio::any_io_executor executor,
+                   boost::asio::ssl::context& ssl_ctx, Endpoint endpoint)
+            : m_ex(std::move(executor)),
               m_ssl_ctx(ssl_ctx),
-              m_endpoint(std::move(ep)) {
+              m_endpoint(std::move(endpoint)) {
             m_endpoint.normalize_default_port();
             m_endpoint.normalize_host();
         }
+
+        Connection(const Connection&) = delete;
+        Connection& operator=(const Connection&) = delete;
+        Connection(Connection&&) = delete;
+        Connection& operator=(Connection&&) = delete;
 
         ~Connection() noexcept {
             close_http();
@@ -432,7 +437,6 @@ namespace rest_cpp {
             co_return ec;
         }
 
-       private:
         boost::asio::any_io_executor m_ex;
         boost::asio::ssl::context& m_ssl_ctx;
 

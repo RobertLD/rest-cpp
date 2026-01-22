@@ -19,7 +19,10 @@ option(REST_CPP_INSTALL "Enable install/export packaging" ${_rest_cpp_top_level}
 option(REST_CPP_WARNINGS_AS_ERRORS "Treat warnings as errors" ${_rest_cpp_top_level})
 
 # Useful for IDEs
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# Enable compile commands for Debug and RelWithDebInfo builds
+if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+endif()
 
 # Add GNUInstallDirs & set install path variable
 include(GNUInstallDirs)
@@ -45,6 +48,8 @@ target_include_directories(rest_cpp
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
+
+
 
 # Add warnings if top level package
 function(rest_cpp_set_warnings target)
@@ -91,13 +96,29 @@ else()
   FetchContent_MakeAvailable(nlohmann_json)
 endif()
 
+# simdjson
+add_library(simdjson STATIC
+    external/simdjson/simdjson.cpp
+)
+
+target_include_directories(simdjson PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/simdjson>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+install(FILES external/simdjson/simdjson.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+# Ensure it can accept the flags it needs (C++17 is required for simdjson 3.0+)
+target_compile_features(simdjson PUBLIC cxx_std_20)
+
 target_link_libraries(rest_cpp
-  PUBLIC
-    Boost::system
-    Boost::coroutine
-    OpenSSL::SSL
-    OpenSSL::Crypto
-    nlohmann_json::nlohmann_json
+    PUBLIC
+        Boost::system
+        Boost::coroutine
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        nlohmann_json::nlohmann_json
+        simdjson
 )
 
 ### Tests
@@ -141,6 +162,7 @@ if (REST_CPP_BUILD_TESTS)
         GTest::gtest_main
         rest_cpp
         httplib::httplib
+        simdjson
     )
     include(GoogleTest)
     gtest_discover_tests(rest_cpp_tests DISCOVERY_MODE PRE_TEST)
@@ -188,7 +210,7 @@ endif()
 if (REST_CPP_INSTALL)
   include(CMakePackageConfigHelpers)
 
-  install(TARGETS rest_cpp
+  install(TARGETS rest_cpp simdjson
     EXPORT rest_cppTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -23,10 +23,14 @@ namespace rest_cpp {
         std::chrono::milliseconds request_timeout{5000};
 
         // Maximum size of response bodies, in bytes.
-        size_t max_body_bytes{10 * 1024 * 1024};  // 10 MB
+        size_t max_body_bytes{static_cast<size_t>(10) * 1024U *
+                              1024U};  // 10 MB
 
         /// Verify SSL certificates for HTTPS requests.
         bool verify_tls{true};
+
+        /// Middleware interceptors for request manipulation.
+        std::vector<std::shared_ptr<const class RequestInterceptor>> interceptors;
     };
 
     struct AsyncConnectionPoolConfiguration {

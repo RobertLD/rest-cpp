@@ -4,6 +4,7 @@
 
 #include "rest_cpp/connection/connection_pool.hpp"
 #include "rest_cpp/endpoint.hpp"
+#include "rest_cpp/middleware.hpp"
 #include "rest_cpp/url.hpp"
 
 namespace beast = boost::beast;
@@ -50,6 +51,15 @@ namespace rest_cpp {
         }
 
         UrlComponents u = std::move(u_res.value());
+
+        // Apply interceptors
+        if (!cfg_.interceptors.empty()) {
+            for (const auto& interceptor : cfg_.interceptors) {
+                if (interceptor) {
+                    interceptor->prepare(request, u);
+                }
+            }
+        }
 
         // Validate verb
         if (rest_cpp::to_boost_http_method(request.method) ==

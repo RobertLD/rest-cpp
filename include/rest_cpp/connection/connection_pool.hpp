@@ -18,12 +18,12 @@
 #include <unordered_set>
 #include <utility>
 
-#include "rest_cpp/config.hpp"
-#include "rest_cpp/connection/connection.hpp"
-#include "rest_cpp/connection/connection_pool_types.hpp"
-#include "rest_cpp/endpoint.hpp"
-#include "rest_cpp/error.hpp"
-#include "rest_cpp/result.hpp"
+#include "../config.hpp"
+#include "../endpoint.hpp"
+#include "../error.hpp"
+#include "../result.hpp"
+#include "./connection.hpp"
+#include "./connection_pool_types.hpp"
 
 namespace rest_cpp {
 
@@ -37,7 +37,7 @@ namespace rest_cpp {
      *
      * INVARIANTS:
      * 1. For each bucket: endpoint_total == in_use.size() + idle.size()
-     * 2. Global: total_in_use_ == sum(bucket.in_use.size())
+     * 2. Global: m_total_in_use == sum(bucket.in_use.size())
      * 3. No connection exists in both idle and in_use
      * 4. All idle connections pass health checks (when health checking enabled)
      * 5. Every waiter is either actively waiting or being removed by its owner
@@ -86,18 +86,21 @@ namespace rest_cpp {
             Conn& operator*() const { return *get(); }
 
             /// @brief Get the underlying connection, or nullptr if inert
-            Conn* get() const noexcept {
-                auto st = state_.lock();
-                if (!st || !st->alive.load(std::memory_order_acquire))
+            [[nodiscard]] Conn* get() const noexcept {
+                auto state = m_state.lock();
+                if (!state || !state->alive.load(std::memory_order_acquire)) {
                     return nullptr;
-                return conn_;
+                }
+                return m_conn;
             }
 
             explicit operator bool() const noexcept { return get() != nullptr; }
 
-            Endpoint const& endpoint() const noexcept { return endpoint_; }
+            [[nodiscard]] Endpoint const& endpoint() const noexcept {
+                return endpoint_;
+            }
 
-            std::uint64_t id() const noexcept { return id_; }
+            [[nodiscard]] std::uint64_t id() const noexcept { return id_; }
 
            private:
             friend class ConnectionPool;
@@ -108,88 +111,108 @@ namespace rest_cpp {
                 std::atomic<bool> alive{true};
             };
 
-            Lease(std::weak_ptr<State> st, Conn* c, Endpoint ep,
-                  std::uint64_t id,
+            Lease(std::weak_ptr<State> state, Conn* conn, Endpoint endpoint,
+                  std::uint64_t identifier,
                   std::function<void(Endpoint const&, std::uint64_t)> ret)
-                : state_(std::move(st)),
-                  conn_(c),
-                  endpoint_(std::move(ep)),
-                  id_(id),
-                  return_to_pool_(std::move(ret)) {}
+                : m_state(std::move(state)),
+                  m_conn(conn),
+                  endpoint_(std::move(endpoint)),
+                  id_(identifier),
+                  return_to_pool(std::move(ret)) {}
 
             /// @brief Return the connection to the pool if still valid
             /// @note Called on destruction or move
             void reset() noexcept {
-                auto st = state_.lock();
-                if (!conn_) return;
+                auto state = m_state.lock();
+                if (m_conn == nullptr) {
+                    return;
+                }
 
                 // If pool is already dead, do not call back into it.
-                if (!st || !st->alive.load(std::memory_order_acquire)) {
-                    conn_ = nullptr;
+                if (!state || !state->alive.load(std::memory_order_acquire)) {
+                    m_conn = nullptr;
                     return;
                 }
                 // Otherwise, return that bitch
-                if (return_to_pool_) return_to_pool_(endpoint_, id_);
-                conn_ = nullptr;
+                if (return_to_pool) {
+                    return_to_pool(endpoint_, id_);
+                }
+                m_conn = nullptr;
             }
 
             /// @brief Move state from another lease
 
-            void move_from(Lease&& other) noexcept {
-                state_ = std::move(other.state_);
-                conn_ = other.conn_;
+            /// @brief Move state from another lease
+            void move_from(
+                Lease&&
+                    other) noexcept  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+            {
+                // Move all members from the source lease, ensuring proper move
+                // semantics.
+                m_state = std::move(other.m_state);
+                m_conn = other.m_conn;
                 endpoint_ = std::move(other.endpoint_);
                 id_ = other.id_;
-                return_to_pool_ = std::move(other.return_to_pool_);
-                other.conn_ = nullptr;
+                return_to_pool = std::move(other.return_to_pool);
+                // Invalidate the source lease to prevent double‑return.
+                other.m_conn = nullptr;
                 other.id_ = 0;
             }
 
-            std::weak_ptr<State> state_;
-            Conn* conn_{nullptr};
+            std::weak_ptr<State> m_state;
+            Conn* m_conn{nullptr};
             Endpoint endpoint_{};
             std::uint64_t id_{0};
-            std::function<void(Endpoint const&, std::uint64_t)> return_to_pool_;
+            std::function<void(Endpoint const&, std::uint64_t)> return_to_pool;
         };
 
-        ConnectionPool(boost::asio::any_io_executor ex,
+        ConnectionPool(const ConnectionPool&) = delete;
+        ConnectionPool(ConnectionPool&&) = delete;
+        ConnectionPool& operator=(const ConnectionPool&) = delete;
+        ConnectionPool& operator=(ConnectionPool&&) = delete;
+
+        ConnectionPool(boost::asio::any_io_executor executor,
                        boost::asio::ssl::context& ssl_ctx,
                        AsyncConnectionPoolConfiguration cfg)
-            : ex_(std::move(ex)),
-              ssl_ctx_(ssl_ctx),
-              cfg_(cfg),
-              state_(std::make_shared<typename Lease::State>()) {}
+            : m_ex(std::move(executor)),
+              m_ssl_ctx(ssl_ctx),
+              m_cfg(cfg),
+              m_state(std::make_shared<typename Lease::State>()) {}
 
         ~ConnectionPool() {
             // Signal shutdown
-            state_->alive.store(false, std::memory_order_release);
+            m_state->alive.store(false, std::memory_order_release);
 
             // Cancel all waiters
             std::list<Waiter> to_cancel;
             {
-                std::lock_guard<std::mutex> lk(mu_);
-                to_cancel.swap(waiters_);
+                std::lock_guard<std::mutex> lock_guard(mu_);
+                to_cancel.swap(m_waiters);
             }
 
-            for (auto& w : to_cancel) {
-                if (w.timer) w.timer->cancel();
+            for (auto& pending_waiter : to_cancel) {
+                if (pending_waiter.timer) {
+                    pending_waiter.timer->cancel();
+                }
             }
 
-            if (!cfg_.close_on_shutdown) return;
+            if (!m_cfg.close_on_shutdown) {
+                return;
+            }
 
             // Close all idle and in-use connections
-            std::lock_guard<std::mutex> lk(mu_);
-            for (auto& [_, bucket] : buckets_) {
-                for (auto& e : bucket.idle) {
-                    if (e.conn) {
-                        e.conn->close_http();
-                        e.conn->close_https();
+            std::lock_guard<std::mutex> lock_guard(mu_);
+            for (auto& [_endpoint, bucket] : m_buckets) {
+                for (auto& idle_entry : bucket.idle) {
+                    if (idle_entry.conn) {
+                        idle_entry.conn->close_http();
+                        idle_entry.conn->close_https();
                     }
                 }
-                for (auto& [__, up] : bucket.in_use) {
-                    if (up) {
-                        up->close_http();
-                        up->close_https();
+                for (auto& [_id, connection_handle] : bucket.in_use) {
+                    if (connection_handle) {
+                        connection_handle->close_http();
+                        connection_handle->close_https();
                     }
                 }
             }
@@ -198,10 +221,10 @@ namespace rest_cpp {
         /// @brief Try to acquire a connection immediately, returns nullopt if
         /// none
         /// @note Non-blocking, does not wait
-        std::optional<Lease> try_acquire(Endpoint ep) {
-            normalize_(ep);
-            std::lock_guard<std::mutex> lk(mu_);
-            return try_acquire_locked_(ep);
+        std::optional<Lease> try_acquire(Endpoint endpoint) {
+            normalize_endpoint(endpoint);
+            std::lock_guard<std::mutex> lock(mu_);
+            return try_acquire_locked(endpoint);
         }
 
         /// @brief Asynchronously acquire a connection lease
@@ -211,93 +234,94 @@ namespace rest_cpp {
         /// failure
         /// @note Coroutine that may suspend
         boost::asio::awaitable<Result<Lease>> acquire(
-            Endpoint ep, std::chrono::steady_clock::duration timeout =
-                             std::chrono::steady_clock::duration::max()) {
-            normalize_(ep);
+            Endpoint endpoint, std::chrono::steady_clock::duration timeout =
+                                   std::chrono::steady_clock::duration::max()) {
+            normalize_endpoint(endpoint);
 
             for (;;) {
                 // Fast path: try without allocating a waiter
-                if (auto l = try_acquire(ep)) {
-                    metrics_.acquire_success.fetch_add(
+                if (auto lease = try_acquire(endpoint)) {
+                    m_metrics.acquire_success.fetch_add(
                         1, std::memory_order_relaxed);
-                    co_return Result<Lease>::ok(std::move(*l));
+                    co_return Result<Lease>::ok(std::move(*lease));
                 }
 
                 // Check if we are shutting down
-                if (!state_->alive.load(std::memory_order_acquire)) {
-                    metrics_.acquire_shutdown.fetch_add(
+                if (!m_state->alive.load(std::memory_order_acquire)) {
+                    m_metrics.acquire_shutdown.fetch_add(
                         1, std::memory_order_relaxed);
                     co_return Result<Lease>::err(
                         Error{Error::Code::Unknown, "Pool is shutting down"});
                 }
 
-                auto t = std::make_shared<boost::asio::steady_timer>(ex_);
+                auto timer = std::make_shared<boost::asio::steady_timer>(m_ex);
 
-                // Handle infinite timeout
-                if (timeout == std::chrono::steady_clock::duration::max()) {
-                    t->expires_at(std::chrono::steady_clock::time_point::max());
-                } else {
-                    t->expires_after(timeout);
-                }
+                timer->expires_after(timeout);
 
-                std::list<Waiter>::iterator my_waiter_it;
+                std::list<Waiter>::iterator waiter_iterator;
                 {
-                    std::lock_guard<std::mutex> lk(mu_);
+                    std::lock_guard<std::mutex> lock(mu_);
 
                     // Re-check shutdown under lock
-                    if (!state_->alive.load(std::memory_order_acquire)) {
-                        metrics_.acquire_shutdown.fetch_add(
+                    if (!m_state->alive.load(std::memory_order_acquire)) {
+                        m_metrics.acquire_shutdown.fetch_add(
                             1, std::memory_order_relaxed);
                         co_return Result<Lease>::err(Error{
                             Error::Code::Unknown, "Pool is shutting down"});
                     }
 
                     // Determine wait reason and enqueue waiter
-                    WaitReason reason = determine_wait_reason_locked_(ep);
+                    WaitReason reason = determine_wait_reason_locked(endpoint);
 
                     // Enqueue into primary list
-                    my_waiter_it = waiters_.emplace(
-                        waiters_.end(), Waiter{ep, reason, t, true, {}});
+                    waiter_iterator = m_waiters.emplace(m_waiters.end(),
+                                                        Waiter{.ep = endpoint,
+                                                               .reason = reason,
+                                                               .timer = timer,
+                                                               .active = true,
+                                                               .queue_it = {}});
 
                     // Enqueue into secondary list
                     if (reason == WaitReason::EndpointCapacity) {
-                        auto& b = buckets_[ep];
-                        b.waiters.push_back(&(*my_waiter_it));
-                        my_waiter_it->queue_it = std::prev(b.waiters.end());
+                        auto& bucket = m_buckets[endpoint];
+                        bucket.waiters.push_back(&(*waiter_iterator));
+                        waiter_iterator->queue_it =
+                            std::prev(bucket.waiters.end());
                     } else {
-                        global_waiters_.push_back(&(*my_waiter_it));
-                        my_waiter_it->queue_it =
-                            std::prev(global_waiters_.end());
+                        m_global_waiters.push_back(&(*waiter_iterator));
+                        waiter_iterator->queue_it =
+                            std::prev(m_global_waiters.end());
                     }
 
-                    metrics_.waiters_total.fetch_add(1,
-                                                     std::memory_order_relaxed);
+                    m_metrics.waiters_total.fetch_add(
+                        1, std::memory_order_relaxed);
 
                     // Close lost-wakeup window
-                    if (auto l2 = try_acquire_locked_(ep)) {
+                    if (auto lock_con_2 = try_acquire_locked(endpoint)) {
                         // Remove from queues if we acquired immediately
                         if (reason == WaitReason::EndpointCapacity) {
-                            buckets_[ep].waiters.erase(my_waiter_it->queue_it);
+                            m_buckets[endpoint].waiters.erase(
+                                waiter_iterator->queue_it);
                         } else {
-                            global_waiters_.erase(my_waiter_it->queue_it);
+                            m_global_waiters.erase(waiter_iterator->queue_it);
                         }
 
-                        waiters_.erase(my_waiter_it);
-                        metrics_.waiters_total.fetch_sub(
+                        m_waiters.erase(waiter_iterator);
+                        m_metrics.waiters_total.fetch_sub(
                             1, std::memory_order_relaxed);
-                        metrics_.acquire_success.fetch_add(
+                        m_metrics.acquire_success.fetch_add(
                             1, std::memory_order_relaxed);
-                        co_return Result<Lease>::ok(std::move(*l2));
+                        co_return Result<Lease>::ok(std::move(*lock_con_2));
                     }
                 }
 
-                boost::system::error_code ec;
-                co_await t->async_wait(boost::asio::redirect_error(
-                    boost::asio::use_awaitable, ec));
+                boost::system::error_code errc;
+                co_await timer->async_wait(boost::asio::redirect_error(
+                    boost::asio::use_awaitable, errc));
 
                 // Remove ourselves on ALL exit paths
                 {
-                    std::lock_guard<std::mutex> lk(mu_);
+                    std::lock_guard<std::mutex> lock(mu_);
                     // ALWAYS erase the waiter, regardless of active status
                     // The waiter is ours, and we must remove it to keep the
                     // list clean
@@ -305,75 +329,79 @@ namespace rest_cpp {
                     // If we are still active (timeout/cancel), we also need to
                     // remove from the secondary queue because pop_waiter didn't
                     // do it.
-                    if (my_waiter_it->active) {
+                    if (waiter_iterator->active) {
                         try {
-                            if (my_waiter_it->reason ==
+                            if (waiter_iterator->reason ==
                                 WaitReason::EndpointCapacity) {
                                 // Important: Check if bucket still exists?
                                 // Buckets are usually only created, rarely
                                 // destroyed from map.
-                                auto it = buckets_.find(ep);
-                                if (it != buckets_.end()) {
-                                    it->second.waiters.erase(
-                                        my_waiter_it->queue_it);
+                                auto bucket_iter = m_buckets.find(endpoint);
+                                if (bucket_iter != m_buckets.end()) {
+                                    bucket_iter->second.waiters.erase(
+                                        waiter_iterator->queue_it);
                                 }
                             } else {
-                                global_waiters_.erase(my_waiter_it->queue_it);
+                                m_global_waiters.erase(
+                                    waiter_iterator->queue_it);
                             }
+                            // NOLINTNEXTLINE(bugprone-empty-catch)
                         } catch (...) {
                             // Should not happen with valid iterators
                         }
-                        metrics_.waiters_total.fetch_sub(
+                        m_metrics.waiters_total.fetch_sub(
                             1, std::memory_order_relaxed);
                     }
 
-                    waiters_.erase(my_waiter_it);
+                    m_waiters.erase(waiter_iterator);
                 }
 
-                if (!ec) {
+                if (!errc) {
                     // Timer expired = timeout
-                    metrics_.acquire_timeout.fetch_add(
+                    m_metrics.acquire_timeout.fetch_add(
                         1, std::memory_order_relaxed);
                     co_return Result<Lease>::err(
                         Error{Error::Code::Timeout, "Acquire timeout"});
                 }
 
-                if (ec == boost::asio::error::operation_aborted) {
+                if (errc == boost::asio::error::operation_aborted) {
                     continue;
                 }
 
                 // Unexpected error
-                metrics_.acquire_internal_error.fetch_add(
+                m_metrics.acquire_internal_error.fetch_add(
                     1, std::memory_order_relaxed);
                 co_return Result<Lease>::err(Error{
-                    Error::Code::Unknown, "Internal error: " + ec.message()});
+                    Error::Code::Unknown, "Internal error: " + errc.message()});
             }
         }
 
         /// Shutdown the pool immediately, canceling all waiters
         void shutdown() {
-            state_->alive.store(false, std::memory_order_release);
+            m_state->alive.store(false, std::memory_order_release);
 
             // Cancel all waiters
             std::list<Waiter> to_cancel;
             {
-                std::lock_guard<std::mutex> lk(mu_);
-                to_cancel.swap(waiters_);
-                metrics_.waiters_total.store(0, std::memory_order_relaxed);
+                std::lock_guard<std::mutex> lock(mu_);
+                to_cancel.swap(m_waiters);
+                m_metrics.waiters_total.store(0, std::memory_order_relaxed);
             }
 
-            for (auto& w : to_cancel) {
-                if (w.timer) w.timer->cancel();
+            for (auto& waiter : to_cancel) {
+                if (waiter.timer) {
+                    waiter.timer->cancel();
+                }
             }
 
             // Close connections if configured
-            if (cfg_.close_on_shutdown) {
-                std::lock_guard<std::mutex> lk(mu_);
-                for (auto& [_, bucket] : buckets_) {
-                    for (auto& e : bucket.idle) {
-                        if (e.conn) {
-                            e.conn->close_http();
-                            e.conn->close_https();
+            if (m_cfg.close_on_shutdown) {
+                std::lock_guard<std::mutex> lock(mu_);
+                for (auto& [_endpoint, bucket] : m_buckets) {
+                    for (auto& idle_entry : bucket.idle) {
+                        if (idle_entry.conn) {
+                            idle_entry.conn->close_http();
+                            idle_entry.conn->close_https();
                         }
                     }
                 }
@@ -387,14 +415,14 @@ namespace rest_cpp {
 
             while (std::chrono::steady_clock::now() < deadline) {
                 {
-                    std::lock_guard<std::mutex> lk(mu_);
-                    if (total_in_use_ == 0) {
+                    std::lock_guard<std::mutex> lock(mu_);
+                    if (m_total_in_use == 0) {
                         co_return true;  // All connections returned
                     }
                 }
 
                 // Wait a bit before checking again
-                auto timer = std::make_shared<boost::asio::steady_timer>(ex_);
+                auto timer = std::make_shared<boost::asio::steady_timer>(m_ex);
                 timer->expires_after(std::chrono::milliseconds(100));
                 co_await timer->async_wait(boost::asio::use_awaitable);
             }
@@ -403,20 +431,20 @@ namespace rest_cpp {
         }
 
         ///@brief Access metrics for monitoring
-        ConnectionPoolMetrics const& metrics() const { return metrics_; }
+        ConnectionPoolMetrics const& metrics() const { return m_metrics; }
 
         ///@brief Report connection failure for circuit breaker (call from user
         /// code)
-        void report_failure(Endpoint const& ep) {
-            report_connection_failure(ep);
+        void report_failure(Endpoint const& endpoint) {
+            report_connection_failure(endpoint);
         }
 
         ///@brief Report connection success for circuit breaker (call from user
         /// code)
-        void report_success(Endpoint const& ep) {
-            report_connection_success(ep);
+        void report_success(Endpoint const& endpoint) {
+            report_connection_success(endpoint);
         }
-        enum class WaitReason {
+        enum class WaitReason : std::uint8_t {
             EndpointCapacity,  ///< Blocked by per-endpoint limit
             GlobalCapacity     ///< Blocked by global pool limit
         };
@@ -439,17 +467,17 @@ namespace rest_cpp {
                 in_use;  ///< In-use connections
 
             /// @brief Waiters specifically waiting for this bucket
-            /// @note Secondary index into waiters_ list
+            /// @note Secondary index into m_waiters list
             std::list<Waiter*> waiters;
 
             // Circuit breaker state
             std::size_t consecutive_failures{
                 0};  ///< Consecutive connection failures
             std::chrono::steady_clock::time_point
-                circuit_open_until{};  ///< Circuit open duration
+                circuit_open_until;  ///< Circuit open duration
 
             ///@brief Check if circuit breaker is open
-            bool is_circuit_open(
+            [[nodiscard]] bool is_circuit_open(
                 std::chrono::steady_clock::time_point now) const {
                 return now < circuit_open_until;
             }
@@ -465,7 +493,7 @@ namespace rest_cpp {
             bool active{true};  ///< Whether still waiting
 
             /// @brief Iterator into the secondary queue (Bucket::waiters or
-            /// ConnectionPool::global_waiters_)
+            /// ConnectionPool::m_global_waiters)
             /// @note Used for O(1) removal on timeout/cancel
             std::list<Waiter*>::iterator queue_it;
         };
@@ -475,19 +503,19 @@ namespace rest_cpp {
         /// @note Modifies the endpoint in place
         /// @note Called before any public method
         /// @note Super basic, just lowercases everything
-        void normalize_(Endpoint& ep) {
-            ep.normalize_default_port();
-            ep.normalize_host();
+        static void normalize_endpoint(Endpoint& endpoint) {
+            endpoint.normalize_default_port();
+            endpoint.normalize_host();
         }
 
         /// @brief Check internal invariants, only in debug builds
         /// @note THis is just here because async code is so fucking hard to
         /// write
-        void check_invariants_locked_() const {
+        void check_invariants_locked() {
 #ifndef NDEBUG
             std::size_t computed_total = 0;
 
-            for (auto const& [ep, b] : buckets_) {
+            for (auto const& [ep, b] : m_buckets) {
                 computed_total += b.in_use.size();
 
                 // Invariant: no connection in both idle and in_use
@@ -505,27 +533,27 @@ namespace rest_cpp {
                 }
             }
 
-            assert(computed_total == total_in_use_ && "total_in_use_ drift");
+            assert(computed_total == m_total_in_use && "m_total_in_use drift");
 #else
-            return;
 #endif
         }
 
         /// @brief Determine wait reason for an endpoint under lock
-        WaitReason determine_wait_reason_locked_(Endpoint const& ep) const {
-            auto it = buckets_.find(ep);
-            if (it == buckets_.end()) {
+        WaitReason determine_wait_reason_locked(
+            Endpoint const& endpoint) const {
+            auto buck_iterator = m_buckets.find(endpoint);
+            if (buck_iterator == m_buckets.end()) {
                 // New endpoint, check global capacity
-                std::size_t total_total = total_in_use_ + total_idle_locked_();
-                return (total_total >= cfg_.max_total_connections)
+                std::size_t total_total = m_total_in_use + total_idle_locked();
+                return (total_total >= m_cfg.max_total_connections)
                            ? WaitReason::GlobalCapacity
                            : WaitReason::EndpointCapacity;
             }
 
-            auto const& b = it->second;
-            std::size_t ep_total = b.in_use.size() + b.idle.size();
+            auto const& bucket = buck_iterator->second;
+            std::size_t ep_total = bucket.in_use.size() + bucket.idle.size();
 
-            if (ep_total >= cfg_.max_connections_per_endpoint) {
+            if (ep_total >= m_cfg.max_connections_per_endpoint) {
                 return WaitReason::EndpointCapacity;
             }
             return WaitReason::GlobalCapacity;
@@ -533,19 +561,19 @@ namespace rest_cpp {
 
         /// @brief Pop a waiter for the given endpoint under lock
         std::shared_ptr<boost::asio::steady_timer>
-        pop_waiter_for_endpoint_locked_(Endpoint const& ep) {
+        pop_waiter_for_endpoint_locked(Endpoint const& endpoint) {
             // First: try endpoint-specific waiters (O(1))
-            auto it = buckets_.find(ep);
-            if (it != buckets_.end()) {
-                auto& b = it->second;
-                while (!b.waiters.empty()) {
-                    Waiter* w = b.waiters.front();
-                    b.waiters.pop_front();  // Remove from secondary queue
+            auto buck_iterator = m_buckets.find(endpoint);
+            if (buck_iterator != m_buckets.end()) {
+                auto& bucket = buck_iterator->second;
+                while (!bucket.waiters.empty()) {
+                    Waiter* waiter = bucket.waiters.front();
+                    bucket.waiters.pop_front();  // Remove from secondary queue
 
-                    if (w->active) {
-                        w->active = false;
-                        auto timer = w->timer;
-                        metrics_.waiters_total.fetch_sub(
+                    if (waiter->active) {
+                        waiter->active = false;
+                        auto timer = waiter->timer;
+                        m_metrics.waiters_total.fetch_sub(
                             1, std::memory_order_relaxed);
                         return timer;
                     }
@@ -553,15 +581,15 @@ namespace rest_cpp {
             }
 
             // Second: try "any endpoint" / global waiters (O(1))
-            while (!global_waiters_.empty()) {
-                Waiter* w = global_waiters_.front();
-                global_waiters_.pop_front();  // Remove from secondary queue
+            while (!m_global_waiters.empty()) {
+                Waiter* global_waiter = m_global_waiters.front();
+                m_global_waiters.pop_front();  // Remove from secondary queue
 
-                if (w->active) {
-                    w->active = false;
-                    auto timer = w->timer;
-                    metrics_.waiters_total.fetch_sub(1,
-                                                     std::memory_order_relaxed);
+                if (global_waiter->active) {
+                    global_waiter->active = false;
+                    auto timer = global_waiter->timer;
+                    m_metrics.waiters_total.fetch_sub(
+                        1, std::memory_order_relaxed);
                     return timer;
                 }
             }
@@ -570,27 +598,33 @@ namespace rest_cpp {
         }
 
         /// @brief Compute total number of idle connections under lock
-        std::size_t total_idle_locked_() const {
-            std::size_t n = 0;
-            for (auto const& [_, b] : buckets_) n += b.idle.size();
-            return n;
+        std::size_t total_idle_locked() const {
+            std::size_t count = 0;
+            for (auto const& [_endpoint, _bucket] : m_buckets) {
+                count += _bucket.idle.size();
+            }
+            return count;
         }
 
         /// @brief Prune idle connections that have expired under lock
-        void prune_idle_locked_(std::chrono::steady_clock::time_point now) {
-            if (cfg_.connection_idle_ttl.count() <= 0) return;
+        void prune_idle_locked(std::chrono::steady_clock::time_point now) {
+            if (m_cfg.connection_idle_ttl.count() <= 0) {
+                return;
+            }
 
-            for (auto& [_, b] : buckets_) {
-                while (!b.idle.empty()) {
-                    auto const& front = b.idle.front();
-                    if (now - front.last_used < cfg_.connection_idle_ttl) break;
+            for (auto& [_endpoint, _bucket] : m_buckets) {
+                while (!_bucket.idle.empty()) {
+                    auto const& front = _bucket.idle.front();
+                    if (now - front.last_used < m_cfg.connection_idle_ttl) {
+                        break;
+                    }
 
-                    if (cfg_.close_on_prune && front.conn) {
+                    if (m_cfg.close_on_prune && front.conn) {
                         front.conn->close_http();
                         front.conn->close_https();
                     }
-                    b.idle.pop_front();
-                    metrics_.connection_pruned.fetch_add(
+                    _bucket.idle.pop_front();
+                    m_metrics.connection_pruned.fetch_add(
                         1, std::memory_order_relaxed);
                 }
             }
@@ -598,215 +632,228 @@ namespace rest_cpp {
 
         /// @brief Report connection failure for circuit breaker
         /// @param ep Endpoint of the failed connection
-        void report_connection_failure(Endpoint const& ep) {
-            std::lock_guard<std::mutex> lk(mu_);
-            auto& b = buckets_[ep];
+        void report_connection_failure(Endpoint const& endpoint) {
+            std::lock_guard<std::mutex> lock(mu_);
+            auto& bucket = m_buckets[endpoint];
 
-            b.consecutive_failures++;
+            bucket.consecutive_failures++;
 
-            if (b.consecutive_failures >=
-                cfg_.circuit_breaker_failure_threshold) {
-                b.circuit_open_until = std::chrono::steady_clock::now() +
-                                       cfg_.circuit_breaker_timeout;
-                metrics_.circuit_breaker_opened.fetch_add(
+            if (bucket.consecutive_failures >=
+                m_cfg.circuit_breaker_failure_threshold) {
+                bucket.circuit_open_until = std::chrono::steady_clock::now() +
+                                            m_cfg.circuit_breaker_timeout;
+                m_metrics.circuit_breaker_opened.fetch_add(
                     1, std::memory_order_relaxed);
             }
         }
 
         /// @brief Report connection success for circuit breaker
         /// @param ep Endpoint of the successful connection
-        void report_connection_success(Endpoint const& ep) {
-            std::lock_guard<std::mutex> lk(mu_);
-            auto it = buckets_.find(ep);
-            if (it == buckets_.end()) return;
+        void report_connection_success(Endpoint const& endpoint) {
+            std::lock_guard<std::mutex> lock(mu_);
+            auto bucket_iter = m_buckets.find(endpoint);
+            if (bucket_iter == m_buckets.end()) {
+                return;
+            }
 
-            auto& b = it->second;
-            if (b.consecutive_failures > 0) {
-                b.consecutive_failures = 0;
-                metrics_.circuit_breaker_closed.fetch_add(
+            auto& bucket = bucket_iter->second;
+            if (bucket.consecutive_failures > 0) {
+                bucket.consecutive_failures = 0;
+                m_metrics.circuit_breaker_closed.fetch_add(
                     1, std::memory_order_relaxed);
             }
         }
 
         /// @brief Basic health check for a connection
-        bool is_connection_healthy_(
+        bool is_connection_healthy(
             [[maybe_unused]] Conn const& conn) const noexcept {
-            // Basic health check - can be enhanced with actual socket checks
-            // For now, just return true as Connection class will be enhanced
-            // separately
-            return true;
+            // Use the Connection's own health check if available.
+            // This allows the pool to drop connections that are no longer
+            // usable (e.g., closed sockets).
+            return conn.is_healthy();
         }
 
         /// @brief Release a connection back to the pool
-        void release(Endpoint const& ep, std::uint64_t id) noexcept {
-            std::shared_ptr<boost::asio::steady_timer> w;
+        void release(Endpoint const& endpoint, std::uint64_t ident) noexcept {
+            std::shared_ptr<boost::asio::steady_timer> timer;
 
             try {
-                std::lock_guard<std::mutex> lk(mu_);
-                auto it = buckets_.find(ep);
+                std::lock_guard<std::mutex> lock(mu_);
+                auto bucket_iter = m_buckets.find(endpoint);
 
-                if (it == buckets_.end()) {
-                    metrics_.release_invalid_id.fetch_add(
+                if (bucket_iter == m_buckets.end()) {
+                    m_metrics.release_invalid_id.fetch_add(
                         1, std::memory_order_relaxed);
                     return;
                 }
 
-                auto& b = it->second;
-                auto it2 = b.in_use.find(id);
+                auto& bucket = bucket_iter->second;
+                auto it2 = bucket.in_use.find(ident);
 
-                if (it2 == b.in_use.end()) {
-                    metrics_.release_invalid_id.fetch_add(
+                if (it2 == bucket.in_use.end()) {
+                    m_metrics.release_invalid_id.fetch_add(
                         1, std::memory_order_relaxed);
                     return;
                 }
 
-                auto up = std::move(it2->second);
-                b.in_use.erase(it2);
-                --total_in_use_;
-                metrics_.total_in_use.store(total_in_use_,
-                                            std::memory_order_relaxed);
+                auto uptr_conn = std::move(it2->second);
+                bucket.in_use.erase(it2);
+                --m_total_in_use;
+                m_metrics.total_in_use.store(m_total_in_use,
+                                             std::memory_order_relaxed);
 
                 // Health check before recycling
-                bool healthy = up && is_connection_healthy_(*up);
+                bool healthy = uptr_conn && is_connection_healthy(*uptr_conn);
 
                 if (healthy) {
                     auto now = std::chrono::steady_clock::now();
-                    b.idle.push_back(IdleEntry{
-                        std::move(up), now,
-                        now,  // created time (will be set properly on first
-                              // create)
-                        0     // reuse_count
+                    bucket.idle.push_back(IdleEntry{
+                        .conn = std::move(uptr_conn),
+                        .last_used = now,
+                        .created = now,   // created time (will be set properly
+                                          // on first create)
+                        .reuse_count = 0  // reuse_count
                     });
-                    metrics_.total_idle.fetch_add(1, std::memory_order_relaxed);
+                    m_metrics.total_idle.fetch_add(1,
+                                                   std::memory_order_relaxed);
                 } else {
-                    metrics_.connection_dropped_unhealthy.fetch_add(
+                    m_metrics.connection_dropped_unhealthy.fetch_add(
                         1, std::memory_order_relaxed);
                     // Connection dropped, capacity freed
                 }
 
                 // Pop waiter UNDER LOCK, but don't cancel  just yet
-                w = pop_waiter_for_endpoint_locked_(ep);
+                timer = pop_waiter_for_endpoint_locked(endpoint);
 
-                check_invariants_locked_();
+                check_invariants_locked();
             } catch (...) {
                 // Swallow all exceptions in release to avoid throwing from
                 // destructor
             }
 
             // Cancel OUTSIDE lock to avoid deadlock
-            if (w) {
-                w->cancel();
+            if (timer) {
+                timer->cancel();
             }
         }
 
         /// @brief Try to acquire a connection under lock
-        std::optional<Lease> try_acquire_locked_(Endpoint const& ep) {
+        std::optional<Lease> try_acquire_locked(Endpoint const& endpoint) {
             // Check shutdown
-            if (!state_->alive.load(std::memory_order_acquire)) {
+            if (!m_state->alive.load(std::memory_order_acquire)) {
                 return std::nullopt;
             }
 
             auto now = std::chrono::steady_clock::now();
-            prune_idle_locked_(now);
+            prune_idle_locked(now);
 
-            auto& b = buckets_[ep];
+            auto& bucket = m_buckets[endpoint];
 
             // Check circuit breaker
-            if (b.is_circuit_open(now)) {
+            if (bucket.is_circuit_open(now)) {
                 return std::nullopt;
             }
 
             // Prefer reusing idle connections
-            while (!b.idle.empty()) {
-                auto entry = std::move(b.idle.front());
-                b.idle.pop_front();
-                metrics_.total_idle.fetch_sub(1, std::memory_order_relaxed);
+            while (!bucket.idle.empty()) {
+                auto entry = std::move(bucket.idle.front());
+                bucket.idle.pop_front();
+                m_metrics.total_idle.fetch_sub(1, std::memory_order_relaxed);
 
                 // Validate health
-                if (!entry.conn || !is_connection_healthy_(*entry.conn)) {
-                    metrics_.connection_dropped_unhealthy.fetch_add(
+                if (!entry.conn || !is_connection_healthy(*entry.conn)) {
+                    m_metrics.connection_dropped_unhealthy.fetch_add(
                         1, std::memory_order_relaxed);
                     continue;  // Try next idle connection
                 }
 
                 // Check reuse limit
-                if (entry.reuse_count >= cfg_.max_connection_reuse_count) {
-                    metrics_.connection_dropped_reuse_limit.fetch_add(
+                if (entry.reuse_count >= m_cfg.max_connection_reuse_count) {
+                    m_metrics.connection_dropped_reuse_limit.fetch_add(
                         1, std::memory_order_relaxed);
                     continue;
                 }
 
                 // Check age limit
-                if (now - entry.created > cfg_.max_connection_age) {
-                    metrics_.connection_dropped_age_limit.fetch_add(
+                if (now - entry.created > m_cfg.max_connection_age) {
+                    m_metrics.connection_dropped_age_limit.fetch_add(
                         1, std::memory_order_relaxed);
                     continue;
                 }
 
                 // Connection is good to reuse
                 entry.reuse_count++;
-                auto id = next_id_++;
+                auto ident = m_next_id++;
                 Conn* raw = entry.conn.get();
-                b.in_use.emplace(id, std::move(entry.conn));
-                ++total_in_use_;
+                bucket.in_use.emplace(ident, std::move(entry.conn));
+                ++m_total_in_use;
 
-                metrics_.total_in_use.store(total_in_use_,
-                                            std::memory_order_relaxed);
-                metrics_.connection_reused.fetch_add(1,
-                                                     std::memory_order_relaxed);
+                m_metrics.total_in_use.store(m_total_in_use,
+                                             std::memory_order_relaxed);
+                m_metrics.connection_reused.fetch_add(
+                    1, std::memory_order_relaxed);
 
-                check_invariants_locked_();
-                return Lease(state_, raw, ep, id,
-                             [this](Endpoint const& e, std::uint64_t id_) {
-                                 release(e, id_);
-                             });
+                check_invariants_locked();
+                return Lease(
+                    m_state, raw, endpoint, ident,
+                    [this](Endpoint const& endpoint, std::uint64_t id_) {
+                        release(endpoint, id_);
+                    });
             }
 
             // No idle connections available, check capacity for creating new
-            const std::size_t endpoint_total = b.in_use.size() + b.idle.size();
+            const std::size_t endpoint_total =
+                bucket.in_use.size() + bucket.idle.size();
             const std::size_t total_total =
-                total_in_use_ + total_idle_locked_();
+                m_total_in_use + total_idle_locked();
 
-            if (endpoint_total >= cfg_.max_connections_per_endpoint)
+            if (endpoint_total >= m_cfg.max_connections_per_endpoint) {
                 return std::nullopt;
-            if (total_total >= cfg_.max_total_connections) return std::nullopt;
+            }
+            if (total_total >= m_cfg.max_total_connections) {
+                return std::nullopt;
+            }
 
             // Create a new connection and mark it in-use
-            auto up = std::make_unique<Conn>(ex_, ssl_ctx_, ep);
-            Conn* raw = up.get();
-            auto id = next_id_++;
+            auto connection_instance =
+                std::make_unique<Conn>(m_ex, m_ssl_ctx, endpoint);
+            Conn* raw = connection_instance.get();
+            auto connection_id = m_next_id++;
 
-            b.in_use.emplace(id, std::move(up));
-            ++total_in_use_;
+            bucket.in_use.emplace(connection_id,
+                                  std::move(connection_instance));
+            ++m_total_in_use;
 
-            metrics_.total_in_use.store(total_in_use_,
-                                        std::memory_order_relaxed);
-            metrics_.connection_created.fetch_add(1, std::memory_order_relaxed);
+            m_metrics.total_in_use.store(m_total_in_use,
+                                         std::memory_order_relaxed);
+            m_metrics.connection_created.fetch_add(1,
+                                                   std::memory_order_relaxed);
 
-            check_invariants_locked_();
-            return Lease(state_, raw, ep, id,
-                         [this](Endpoint const& e, std::uint64_t id_) {
-                             release(e, id_);
+            check_invariants_locked();
+            return Lease(m_state, raw, endpoint, connection_id,
+                         [this](Endpoint const& endpoint, std::uint64_t id_) {
+                             release(endpoint, id_);
                          });
         }
 
-        boost::asio::any_io_executor ex_;     ///< Executor for async operations
-        boost::asio::ssl::context& ssl_ctx_;  ///< SSL context for HTTPS
-        AsyncConnectionPoolConfiguration cfg_;  ///< Pool configuration
+       private:
+        boost::asio::any_io_executor m_ex;  ///< Executor for async operations
+        boost::asio::ssl::context& m_ssl_ctx;    ///< SSL context for HTTPS
+        AsyncConnectionPoolConfiguration m_cfg;  ///< Pool configuration
 
         mutable std::mutex mu_;  ///< Mutex for protecting internal state
         std::unordered_map<Endpoint, Bucket>
-            buckets_;  ///< Per-endpoint buckets
+            m_buckets;  ///< Per-endpoint buckets
 
-        std::list<Waiter> waiters_;  ///< Stable iterators for removal
+        std::list<Waiter> m_waiters;  ///< Stable iterators for removal
         std::list<Waiter*>
-            global_waiters_;  ///< Waiters waiting on global capacity
+            m_global_waiters;  ///< Waiters waiting on global capacity
 
-        std::size_t total_in_use_{0};  ///< Total in-use connections
-        std::uint64_t next_id_{1};     ///< Next connection ID
+        std::size_t m_total_in_use{0};  ///< Total in-use connections
+        std::uint64_t m_next_id{1};     ///< Next connection ID
 
-        std::shared_ptr<typename Lease::State> state_;  ///< Shared pool state
-        ConnectionPoolMetrics metrics_;  ///< Metrics for monitoring
+        std::shared_ptr<typename Lease::State> m_state;  ///< Shared pool state
+        ConnectionPoolMetrics m_metrics;  ///< Metrics for monitoring
     };
 
 }  // namespace rest_cpp

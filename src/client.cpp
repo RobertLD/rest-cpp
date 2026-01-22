@@ -3,6 +3,7 @@
 #include <boost/beast/http/verb.hpp>
 
 #include "rest_cpp/endpoint.hpp"
+#include "rest_cpp/middleware.hpp"
 #include "rest_cpp/url.hpp"
 
 namespace beast = boost::beast;
@@ -52,16 +53,27 @@ namespace rest_cpp {
     }
 
     Result<Response> RestClient::send(const Request& request) {
+        Request req_copy = request;
+
         // Resolve URL (relative vs absolute, base_url handling)
-        auto u_res = resolve_request_url(request.url);
+        auto u_res = resolve_request_url(req_copy.url);
         if (u_res.has_error()) {
             return Result<Response>::err(u_res.error());
         }
 
         UrlComponents u = std::move(u_res.value());
 
+        // Apply interceptors
+        if (!m_config.interceptors.empty()) {
+            for (const auto& interceptor : m_config.interceptors) {
+                if (interceptor) {
+                    interceptor->prepare(req_copy, u);
+                }
+            }
+        }
+
         // Validate verb like before
-        const http::verb verb = rest_cpp::to_boost_http_method(request.method);
+        const http::verb verb = rest_cpp::to_boost_http_method(req_copy.method);
         if (verb == http::verb::unknown) {
             return Result<Response>::err(
                 Error{Error::Code::Unknown, "Unknown HTTP method"});
@@ -76,7 +88,7 @@ namespace rest_cpp {
         // Build PreparedRequest (no UrlComponents stored inside)
         PreparedRequest preq;
         preq.ep = ep;
-        preq.beast_req = prepare_beast_request(request, u, m_config.user_agent,
+        preq.beast_req = prepare_beast_request(req_copy, u, m_config.user_agent,
                                                /*keep_alive=*/true);
 
         boost::system::error_code ec;

@@ -13,6 +13,7 @@
 #include "rest_cpp/request.hpp"
 #include "rest_cpp/response.hpp"
 #include "rest_cpp/result.hpp"
+#include "rest_cpp/serialize_impl.hpp"
 #include "rest_cpp/url.hpp"
 
 namespace rest_cpp {
@@ -28,13 +29,35 @@ namespace rest_cpp {
         boost::asio::awaitable<Result<Response>> post(std::string url,
                                                       std::string body);
 
-        // add others similarly
+        // Templated versions of common methods
+        template <typename T>
+        boost::asio::awaitable<Result<T>> get(std::string url) {
+            co_return to_result_t<T>(co_await get(std::move(url)));
+        }
 
-        AsyncRestClientConfiguration const& config() const noexcept {
-            return cfg_;
+        template <typename T>
+        boost::asio::awaitable<Result<T>> post(std::string url,
+                                               std::string body) {
+            co_return to_result_t<T>(
+                co_await post(std::move(url), std::move(body)));
         }
 
        private:
+        template <typename T>
+        Result<T> to_result_t(Result<Response>&& res) {
+            if (res.has_error()) {
+                return Result<T>::err(res.error());
+            }
+            T out;
+            deserialize(res.value(), out);
+            return Result<T>::ok(std::move(out));
+        }
+
+        [[nodiscard]] AsyncRestClientConfiguration const& config()
+            const noexcept {
+            return cfg_;
+        }
+
         using tcp = boost::asio::ip::tcp;
 
         Result<UrlComponents> resolve_request_url(std::string_view url) const;

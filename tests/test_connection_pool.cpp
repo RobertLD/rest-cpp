@@ -148,6 +148,39 @@ namespace {
         // reset() is private; destruction is sufficient to test inertness
     }
 
+        // Test that unhealthy connections are not reused
+    // Test that unhealthy connections are not reused
+    TEST(ConnectionPoolTest, UnhealthyConnectionNotReused) {
+        boost::asio::io_context io;
+        boost::asio::ssl::context ssl_ctx(boost::asio::ssl::context::sslv23);
+        ConnectionPool pool(io.get_executor(), ssl_ctx, default_cfg());
+        Endpoint ep = make_ep();
+
+        // Acquire a connection
+        auto lease1 = pool.try_acquire(ep);
+        ASSERT_TRUE(lease1.has_value());
+        auto* conn1 = lease1->get();
+
+        // Get initial metric
+        auto initial_dropped = pool.metrics().connection_dropped_unhealthy.load();
+
+        // Make the connection unhealthy
+        if (conn1) {
+            conn1->close_http();
+        }
+
+        // Release lease (should discard unhealthy connection)
+        lease1 = ConnectionPool::Lease{};
+
+        // Verify metric increased
+        EXPECT_EQ(pool.metrics().connection_dropped_unhealthy.load(),
+                  initial_dropped + 1);
+
+        // Acquire again, should get a valid connection
+        auto lease2 = pool.try_acquire(ep);
+        ASSERT_TRUE(lease2.has_value());
+    }
+
     // Test capable of triggering the UAF race condition
     TEST(ConnectionPoolTest, StressTestRaceCondition) {
         boost::asio::io_context ioc(4);

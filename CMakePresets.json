@@ -2,14 +2,16 @@
     "version": 3,
     "configurePresets": [
         {
-            "name": "dev-perf",
+            "name": "DEV",
             "displayName": "Dev (tests+perf)",
-            "binaryDir": "${sourceDir}/build/dev-perf",
+            "binaryDir": "${sourceDir}/build/",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo",
                 "REST_CPP_BUILD_TESTS": "ON",
                 "CMAKE_CXX_STANDARD": "20",
                 "REST_CPP_BUILD_PERF": "ON",
+                "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+                "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_TOOLCHAIN_FILE": "${env:HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake"
             }
         },

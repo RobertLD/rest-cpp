@@ -35,6 +35,23 @@ namespace rest_cpp {
             return s;
         }
 
+        /// @brief URL-encode a string.
+        inline std::string url_encode(std::string_view s) {
+            static const char* hex = "0123456789ABCDEF";
+            std::string out;
+            out.reserve(s.size());
+            for (unsigned char c : s) {
+                if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+                    out.push_back(c);
+                } else {
+                    out.push_back('%');
+                    out.push_back(hex[c >> 4]);
+                    out.push_back(hex[c & 15]);
+                }
+            }
+            return out;
+        }
+
         /// @brief Join a base URL and a relative URI (kept for compatibility /
         /// non-hot paths).
         inline Result<std::string> combine_base_and_uri(

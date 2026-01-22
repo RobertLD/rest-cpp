@@ -53,13 +53,13 @@ namespace rest_cpp {
 
         /// @brief True if this Result currently holds a value of type T.
         /// @return Whether the active variant alternative is T.
-        bool has_value() const noexcept {
+        [[nodiscard]] bool has_value() const noexcept {
             return std::holds_alternative<T>(m_state);
         }
 
         /// @brief True if this Result currently holds an Error.
         /// @return Whether the active variant alternative is Error.
-        bool has_error() const noexcept {
+        [[nodiscard]] bool has_error() const noexcept {
             return std::holds_alternative<Error>(m_state);
         }
 
@@ -67,14 +67,14 @@ namespace rest_cpp {
 
         /// @brief Get the stored value (const lvalue overload).
         const T& value() const& {
-            const T* p = value_ptr();
+            const T* ptr = value_ptr();
             // assert(...) is active in debug builds; it’s removed in release
             // (NDEBUG). We want to be nice to users and not throw exceptions
             // in release builds, so we just assert here.
 
-            assert(p &&
+            assert(ptr &&
                    "Result::value() called but this Result holds an Error");
-            return *p;
+            return *ptr;
         }
 
         /// @brief Get the stored value (mutable lvalue overload).
@@ -190,7 +190,11 @@ namespace rest_cpp {
         /// @param fallback A reference to return if this Result does not hold
         /// an Error.
         /// @return Reference to stored Error if present, otherwise fallback.
-        const Error& error_or(const Error& fallback) const noexcept {
+        [[nodiscard]] const Error& error_or(
+            const Error& fallback) const noexcept {
+            // We aren't returning a temporary reference so
+            // ignore the clang tidy warning
+            // NOLINTNEXTLINE(bugprone-return-const-ref-from-parameter)
             return has_error() ? *error_ptr() : fallback;
         }
 
@@ -198,15 +202,16 @@ namespace rest_cpp {
         /// @brief Construct the "value" alternative of the variant in-place.
         /// @tparam Args Argument types forwarded to T's constructor.
         template <typename... Args>
-        explicit Result(std::in_place_type_t<T>, Args&&... args)
+        explicit Result(std::in_place_type_t<T> /*unused*/, Args&&... args)
             : m_state(std::in_place_type<T>, std::forward<Args>(args)...) {}
 
         /// @brief Construct the "error" alternative of the variant by copy.
-        explicit Result(std::in_place_type_t<Error>, const Error& error)
+        explicit Result(std::in_place_type_t<Error> /*unused*/,
+                        const Error& error)
             : m_state(std::in_place_type<Error>, error) {}
 
         /// @brief Construct the "error" alternative of the variant by move.
-        explicit Result(std::in_place_type_t<Error>, Error&& error)
+        explicit Result(std::in_place_type_t<Error> /*unused*/, Error&& error)
             : m_state(std::in_place_type<Error>, std::move(error)) {}
 
         /// @brief Storage: exactly one of {T, Error} is active at any time.
